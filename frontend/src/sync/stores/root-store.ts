@@ -11,7 +11,6 @@ import {
     updateConversation as apiUpdateConversation,
 } from "@/api";
 
-import { db } from "../database";
 import { ConversationStore } from "./conversation-store";
 import { MemberStore } from "./member-store";
 import { MessageStore } from "./message-store";
@@ -92,7 +91,7 @@ export class RootStore {
         llms: Array<LargeLanguageModel>,
         onOptimisticSave: ((id: string) => Promise<void>) | null
     ) {
-        // 1. Optimistically update local database
+        // 1. Optimistically update local stores
         const timestamp = new Date().toISOString();
 
         const conversation: ConversationSchema = {
@@ -129,11 +128,12 @@ export class RootStore {
             tokens: null,
         };
 
-        await db.transaction("readwrite", db.conversations, db.members, db.messages, async () => {
-            await db.conversations.put(conversation, conversation.id);
-            await db.members.put(member, member.id);
-            await db.messages.put(message, message.id);
-        });
+        // Save to stores (which handle database persistence)
+        await Promise.all([
+            this.conversationStore.save(conversation),
+            this.memberStore.save(member),
+            this.messageStore.save(message),
+        ]);
 
         // 1.5. If provided, optimistically navigate
         if (onOptimisticSave !== null) {
@@ -173,7 +173,7 @@ export class RootStore {
         content: string;
         llms: Array<LargeLanguageModel>;
     }) {
-        // 1. Optimistically update local database
+        // 1. Optimistically update local stores
         const timestamp = new Date().toISOString();
 
         const message: MessageSchema = {
@@ -190,34 +190,31 @@ export class RootStore {
             tokens: null,
         };
 
-        await db.transaction("readwrite", db.messages, db.members, async () => {
-            await db.messages.put(message, message.id);
+        // Save message to store
+        await this.messageStore.save(message);
 
-            const member = await db.members
-                .where(["conversationId", "userId"])
-                .equals([props.conversationId, props.userId])
-                .first();
+        // Update member message branches
+        const member = this.memberStore.getMemberByUserAndConversation(
+            props.userId,
+            props.conversationId
+        );
 
-            if (!member) {
-                throw new Error("Unable to find membership.");
-            }
+        if (!member) {
+            throw new Error("Unable to find membership.");
+        }
 
-            const messageBranches = {
-                ...member.messageBranches,
-                [message.id]: true,
-            };
+        const messageBranches = {
+            ...member.messageBranches,
+            [message.id]: true,
+        };
 
-            if (props.siblingMessageId) {
-                messageBranches[props.siblingMessageId] = false;
-            }
+        if (props.siblingMessageId) {
+            messageBranches[props.siblingMessageId] = false;
+        }
 
-            await db.members.put(
-                {
-                    ...member,
-                    messageBranches,
-                },
-                member.id
-            );
+        await this.memberStore.save({
+            ...member,
+            messageBranches,
         });
 
         // 2. Save to API
@@ -250,36 +247,29 @@ export class RootStore {
         hiddenMessageIds: Array<string>;
         shownMessageId: string | null;
     }) {
-        // 1. Optimistically update local database
-        let messageBranches: Record<string, boolean> = {};
+        // 1. Optimistically update local store
+        const member = this.memberStore.getMemberByUserAndConversation(
+            props.userId,
+            props.conversationId
+        );
 
-        await db.transaction("readwrite", db.members, async () => {
-            const member = await db.members
-                .where(["conversationId", "userId"])
-                .equals([props.conversationId, props.userId])
-                .first();
+        if (!member) {
+            throw new Error("Unable to find membership.");
+        }
 
-            if (!member) {
-                throw new Error("Unable to find membership.");
-            }
+        const messageBranches = { ...member.messageBranches };
 
-            messageBranches = { ...member.messageBranches };
+        props.hiddenMessageIds.forEach((id) => {
+            messageBranches[id] = false;
+        });
 
-            props.hiddenMessageIds.forEach((id) => {
-                messageBranches[id] = false;
-            });
+        if (props.shownMessageId) {
+            messageBranches[props.shownMessageId] = true;
+        }
 
-            if (props.shownMessageId) {
-                messageBranches[props.shownMessageId] = true;
-            }
-
-            await db.members.put(
-                {
-                    ...member,
-                    messageBranches,
-                },
-                member.id
-            );
+        await this.memberStore.save({
+            ...member,
+            messageBranches,
         });
 
         // 2. Save to API
@@ -292,24 +282,16 @@ export class RootStore {
     }
 
     async hideConversation(userId: string, conversationId: string) {
-        // 1. Optimistically update local database
-        await db.transaction("readwrite", db.members, async () => {
-            const member = await db.members
-                .where(["conversationId", "userId"])
-                .equals([conversationId, userId])
-                .first();
+        // 1. Optimistically update local store
+        const member = this.memberStore.getMemberByUserAndConversation(userId, conversationId);
 
-            if (!member) {
-                throw new Error("Unable to find membership.");
-            }
+        if (!member) {
+            throw new Error("Unable to find membership.");
+        }
 
-            await db.members.put(
-                {
-                    ...member,
-                    hidden: true,
-                },
-                member.id
-            );
+        await this.memberStore.save({
+            ...member,
+            hidden: true,
         });
 
         // 2. Save to API
@@ -322,24 +304,16 @@ export class RootStore {
     }
 
     async showConversation(userId: string, conversationId: string) {
-        // 1. Optimistically update local database
-        await db.transaction("readwrite", db.members, async () => {
-            const member = await db.members
-                .where(["conversationId", "userId"])
-                .equals([conversationId, userId])
-                .first();
+        // 1. Optimistically update local store
+        const member = this.memberStore.getMemberByUserAndConversation(userId, conversationId);
 
-            if (!member) {
-                throw new Error("Unable to find membership.");
-            }
+        if (!member) {
+            throw new Error("Unable to find membership.");
+        }
 
-            await db.members.put(
-                {
-                    ...member,
-                    hidden: false,
-                },
-                member.id
-            );
+        await this.memberStore.save({
+            ...member,
+            hidden: false,
         });
 
         // 2. Save to API
@@ -356,24 +330,16 @@ export class RootStore {
         conversationId: string,
         llms: Array<LargeLanguageModel>
     ) {
-        // 1. Optimistically update local database
-        await db.transaction("readwrite", db.members, async () => {
-            const member = await db.members
-                .where(["conversationId", "userId"])
-                .equals([conversationId, userId])
-                .first();
+        // 1. Optimistically update local store
+        const member = this.memberStore.getMemberByUserAndConversation(userId, conversationId);
 
-            if (!member) {
-                throw new Error("Unable to find membership.");
-            }
+        if (!member) {
+            throw new Error("Unable to find membership.");
+        }
 
-            await db.members.put(
-                {
-                    ...member,
-                    llmsSelected: llms,
-                },
-                member.id
-            );
+        await this.memberStore.save({
+            ...member,
+            llmsSelected: llms,
         });
 
         // 2. Save to API
