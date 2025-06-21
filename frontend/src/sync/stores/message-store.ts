@@ -1,6 +1,7 @@
 import { makeAutoObservable, runInAction } from "mobx";
 
 import { LargeLanguageModel, MessageSchema } from "@/api";
+import { db } from "@/sync/database";
 
 export class MessageStore {
     messages = new Map<string, MessageSchema>();
@@ -103,5 +104,45 @@ export class MessageStore {
 
     get pendingLLMMessages(): MessageSchema[] {
         return this.allMessages.filter((message) => message.llm && !message.llmCompleted);
+    }
+
+    // Database persistence methods
+    async loadFromDatabase(): Promise<void> {
+        try {
+            this.setLoading(true);
+            const messages = await db.messages.toArray();
+            this.setMessages(messages as MessageSchema[]);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to load messages");
+        } finally {
+            this.setLoading(false);
+        }
+    }
+
+    async saveToDatabase(message: MessageSchema): Promise<void> {
+        try {
+            await db.messages.put(message);
+            this.addMessage(message);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to save message");
+        }
+    }
+
+    async saveAllToDatabase(): Promise<void> {
+        try {
+            const messages = Array.from(this.messages.values());
+            await db.messages.bulkPut(messages);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to save messages");
+        }
+    }
+
+    async deleteFromDatabase(messageId: string): Promise<void> {
+        try {
+            await db.messages.delete(messageId);
+            this.removeMessage(messageId);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to delete message");
+        }
     }
 }

@@ -1,6 +1,7 @@
 import { makeAutoObservable, runInAction } from "mobx";
 
 import { ConversationSchema } from "@/api";
+import { db } from "@/sync/database";
 
 export class ConversationStore {
     conversations = new Map<string, ConversationSchema>();
@@ -99,5 +100,48 @@ export class ConversationStore {
 
     get recentConversations(): ConversationSchema[] {
         return this.sortedConversations.slice(0, 10);
+    }
+
+    // Database persistence methods
+    async loadFromDatabase(): Promise<void> {
+        try {
+            this.setLoading(true);
+            const conversations = await db.conversations.toArray();
+            this.setConversations(conversations as ConversationSchema[]);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to load conversations");
+        } finally {
+            this.setLoading(false);
+        }
+    }
+
+    async saveToDatabase(conversation: ConversationSchema): Promise<void> {
+        try {
+            await db.conversations.put(conversation);
+            this.addConversation(conversation);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to save conversation");
+        }
+    }
+
+    async saveAllToDatabase(): Promise<void> {
+        try {
+            const conversations = Array.from(this.conversations.values());
+            await db.conversations.bulkPut(conversations);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to save conversations");
+        }
+    }
+
+    async deleteFromDatabase(conversationId: string): Promise<void> {
+        try {
+            await db.conversations.delete(conversationId);
+            // Also delete related messages and members
+            await db.messages.where("conversationId").equals(conversationId).delete();
+            await db.members.where("conversationId").equals(conversationId).delete();
+            this.removeConversation(conversationId);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to delete conversation");
+        }
     }
 }

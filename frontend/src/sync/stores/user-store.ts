@@ -1,6 +1,7 @@
 import { makeAutoObservable, runInAction } from "mobx";
 
 import { UserSchema } from "@/api";
+import { db } from "@/sync/database";
 
 export class UserStore {
     users = new Map<string, UserSchema>();
@@ -117,5 +118,52 @@ export class UserStore {
         runInAction(() => {
             this.currentUser = null;
         });
+    }
+
+    // Database persistence methods
+    async loadFromDatabase(): Promise<void> {
+        try {
+            this.setLoading(true);
+            const users = await db.users.toArray();
+            this.setUsers(users as UserSchema[]);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to load users");
+        } finally {
+            this.setLoading(false);
+        }
+    }
+
+    async saveToDatabase(user: UserSchema): Promise<void> {
+        try {
+            await db.users.put(user);
+            this.addUser(user);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to save user");
+        }
+    }
+
+    async saveAllToDatabase(): Promise<void> {
+        try {
+            const users = Array.from(this.users.values());
+            await db.users.bulkPut(users);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to save users");
+        }
+    }
+
+    async deleteFromDatabase(userId: string): Promise<void> {
+        try {
+            await db.users.delete(userId);
+            this.removeUser(userId);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to delete user");
+        }
+    }
+
+    // Save current user to database and update store
+    async saveCurrentUserToDatabase(): Promise<void> {
+        if (this.currentUser) {
+            await this.saveToDatabase(this.currentUser);
+        }
     }
 }

@@ -1,6 +1,7 @@
 import { makeAutoObservable, runInAction } from "mobx";
 
 import { LargeLanguageModel, MemberSchema } from "@/api";
+import { db } from "@/sync/database";
 
 export class MemberStore {
     members = new Map<string, MemberSchema>();
@@ -165,5 +166,45 @@ export class MemberStore {
             member.llmsSelected.forEach((llm) => llmSet.add(llm));
         });
         return Array.from(llmSet);
+    }
+
+    // Database persistence methods
+    async loadFromDatabase(): Promise<void> {
+        try {
+            this.setLoading(true);
+            const members = await db.members.toArray();
+            this.setMembers(members as MemberSchema[]);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to load members");
+        } finally {
+            this.setLoading(false);
+        }
+    }
+
+    async saveToDatabase(member: MemberSchema): Promise<void> {
+        try {
+            await db.members.put(member);
+            this.addMember(member);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to save member");
+        }
+    }
+
+    async saveAllToDatabase(): Promise<void> {
+        try {
+            const members = Array.from(this.members.values());
+            await db.members.bulkPut(members);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to save members");
+        }
+    }
+
+    async deleteFromDatabase(memberId: string): Promise<void> {
+        try {
+            await db.members.delete(memberId);
+            this.removeMember(memberId);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to delete member");
+        }
     }
 }

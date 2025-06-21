@@ -103,6 +103,58 @@ export class RootStore {
     get hasErrors() {
         return this.errors.length > 0;
     }
+
+    // Initialize all stores from IndexedDB
+    async initializeFromDatabase(): Promise<void> {
+        try {
+            // Load all data in parallel
+            await Promise.all([
+                this.userStore.loadFromDatabase(),
+                this.conversationStore.loadFromDatabase(),
+                this.memberStore.loadFromDatabase(),
+                this.messageStore.loadFromDatabase(),
+            ]);
+        } catch (error) {
+            console.error("Failed to initialize stores from database:", error);
+        }
+    }
+
+    // Save all stores to IndexedDB
+    async saveAllToDatabase(): Promise<void> {
+        try {
+            await Promise.all([
+                this.userStore.saveAllToDatabase(),
+                this.conversationStore.saveAllToDatabase(),
+                this.memberStore.saveAllToDatabase(),
+                this.messageStore.saveAllToDatabase(),
+            ]);
+        } catch (error) {
+            console.error("Failed to save all stores to database:", error);
+        }
+    }
+
+    // Clear all data from stores and database
+    async clearAllData(): Promise<void> {
+        try {
+            // Clear stores
+            this.clearAll();
+
+            // Clear database
+            const { db } = await import("@/sync/database");
+            await db.transaction(
+                "rw",
+                [db.messages, db.conversations, db.members, db.users],
+                async () => {
+                    await db.messages.clear();
+                    await db.conversations.clear();
+                    await db.members.clear();
+                    await db.users.clear();
+                }
+            );
+        } catch (error) {
+            console.error("Failed to clear all data:", error);
+        }
+    }
 }
 
 // Create a singleton instance
