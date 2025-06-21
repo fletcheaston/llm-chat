@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { generateShareLink } from "@/api";
 import { useUser } from "@/components/auth";
-import { useConversation } from "@/sync/conversation";
+import { useStore } from "@/sync/stores";
 import { Button } from "@/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/ui/dialog";
 import { Input } from "@/ui/input";
@@ -99,11 +99,16 @@ function ShareContent(props: { conversationId: string }) {
     );
 }
 
-export function ShareButton() {
+export function ShareButton({ conversationId }: { conversationId: string }) {
     /**************************************************************************/
     /* State */
     const user = useUser();
-    const conversation = useConversation();
+    const store = useStore();
+    const conversation = store.getMyConversation(conversationId, user.id);
+
+    if (!conversation) {
+        return null;
+    }
 
     /**************************************************************************/
     /* Render */
@@ -129,7 +134,7 @@ export function ShareButton() {
                     <DialogTitle>Share Chat</DialogTitle>
                 </DialogHeader>
 
-                <ShareContent conversationId={conversation.id} />
+                <ShareContent conversationId={conversationId} />
             </DialogContent>
         </Dialog>
     );

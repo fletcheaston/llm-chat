@@ -1,22 +1,30 @@
 import { useState } from "react";
 
 import { ArrowUpIcon } from "lucide-react";
+import { observer } from "mobx-react-lite";
 import { toast } from "sonner";
 
 import { useUser } from "@/components/auth";
 import { ModelMultiSelect } from "@/components/model-select";
-import { useConversation } from "@/sync/conversation";
 import { useStore } from "@/sync/stores";
 import { Button } from "@/ui/button";
 import { Textarea } from "@/ui/textarea";
 import { cn } from "@/utils";
 
-export function CreateMessage() {
+export const CreateMessage = observer(function CreateMessage({
+    conversationId,
+}: {
+    conversationId: string;
+}) {
     /**************************************************************************/
     /* State */
     const user = useUser();
-    const conversation = useConversation();
     const store = useStore();
+    const conversation = store.getMyConversation(conversationId, user.id);
+
+    if (!conversation) {
+        return null;
+    }
 
     const [message, setMessage] = useState("");
 
@@ -38,7 +46,7 @@ export function CreateMessage() {
                     <ModelMultiSelect
                         llms={conversation.llms}
                         setLlms={(llms) => {
-                            store.setConversationLlms(user.id, conversation.id, llms).catch((e) => {
+                            store.setConversationLlms(user.id, conversationId, llms).catch((e) => {
                                 toast.error(`Unable to update LLMs: ${e}`);
                             });
                         }}
@@ -69,7 +77,7 @@ export function CreateMessage() {
                                     userId: user.id,
                                     replyToId,
                                     siblingMessageId: null,
-                                    conversationId: conversation.id,
+                                    conversationId,
                                     content: message,
                                     llms: conversation.llms,
                                 });
@@ -87,4 +95,4 @@ export function CreateMessage() {
             </div>
         </div>
     );
-}
+});

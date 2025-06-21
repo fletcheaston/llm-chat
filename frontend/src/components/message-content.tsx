@@ -13,9 +13,8 @@ import {
 import { toast } from "sonner";
 
 import { MessageSchema } from "@/api";
-import { MessageTreeSchema, useConversation, useUserMap } from "@/sync/conversation";
 import { MessageProvider, useMessage } from "@/sync/message";
-import { useStore } from "@/sync/stores";
+import { MessageTreeSchema, useStore } from "@/sync/stores";
 import { Button } from "@/ui/button";
 import {
     Carousel,
@@ -150,12 +149,20 @@ function ViewMyMessage(props: {
     );
 }
 
-function BranchMyMessage(props: { message: MessageSchema; onEditStop: () => void }) {
+function BranchMyMessage(props: {
+    message: MessageSchema;
+    onEditStop: () => void;
+    conversationId: string;
+}) {
     /**************************************************************************/
     /* State */
     const user = useUser();
-    const conversation = useConversation();
     const store = useStore();
+    const conversation = store.getMyConversation(props.conversationId, user.id);
+
+    if (!conversation) {
+        return null;
+    }
 
     // Initial content comes from original message
     const contentRef = useRef(props.message.content);
@@ -191,7 +198,7 @@ function BranchMyMessage(props: { message: MessageSchema; onEditStop: () => void
                                         userId: user.id,
                                         replyToId: props.message.replyToId,
                                         siblingMessageId: props.message.id,
-                                        conversationId: conversation.id,
+                                        conversationId: props.conversationId,
                                         content: contentRef.current,
                                         llms: conversation.llms,
                                     });
@@ -225,7 +232,11 @@ function BranchMyMessage(props: { message: MessageSchema; onEditStop: () => void
     );
 }
 
-function MyMessage(props: { message: MessageSchema; unsetBranch: (() => void) | null }) {
+function MyMessage(props: {
+    message: MessageSchema;
+    unsetBranch: (() => void) | null;
+    conversationId: string;
+}) {
     /**************************************************************************/
     /* State */
     const [editing, setEditing] = useState(false);
@@ -246,6 +257,7 @@ function MyMessage(props: { message: MessageSchema; unsetBranch: (() => void) | 
         <BranchMyMessage
             message={props.message}
             onEditStop={() => setEditing(false)}
+            conversationId={props.conversationId}
         />
     );
 }
@@ -357,11 +369,15 @@ function OtherMessage(props: {
     );
 }
 
-export function MessageContent(props: { unsetBranch: (() => void) | null }) {
+export function MessageContent(props: {
+    unsetBranch: (() => void) | null;
+    conversationId: string;
+}) {
     /**************************************************************************/
     /* State */
     const self = useUser();
-    const userMap = useUserMap();
+    const store = useStore();
+    const userMap = store.getUserMapForConversation(props.conversationId);
     const message = useMessage();
 
     /**************************************************************************/
@@ -372,6 +388,7 @@ export function MessageContent(props: { unsetBranch: (() => void) | null }) {
                 key={message.id}
                 message={message}
                 unsetBranch={props.unsetBranch}
+                conversationId={props.conversationId}
             />
         );
     }
@@ -404,13 +421,20 @@ export function MessageContent(props: { unsetBranch: (() => void) | null }) {
     );
 }
 
-export function MessageTree(props: { messageTree: Array<MessageTreeSchema> }) {
+export function MessageTree(props: {
+    messageTree: Array<MessageTreeSchema>;
+    conversationId: string;
+}) {
     /**************************************************************************/
     /* State */
     const user = useUser();
     const settings = useSettings();
-    const conversation = useConversation();
     const store = useStore();
+    const conversation = store.getMyConversation(props.conversationId, user.id);
+
+    if (!conversation) {
+        return null;
+    }
 
     const selectedBranch = useMemo(() => {
         return props.messageTree.find((tree) => {
@@ -426,10 +450,18 @@ export function MessageTree(props: { messageTree: Array<MessageTreeSchema> }) {
         return (
             <div className="flex flex-col gap-10">
                 <MessageProvider messageId={message.id}>
-                    <MessageContent unsetBranch={null} />
+                    <MessageContent
+                        unsetBranch={null}
+                        conversationId={props.conversationId}
+                    />
                 </MessageProvider>
 
-                {replies.length > 0 ? <MessageTree messageTree={replies} /> : null}
+                {replies.length > 0 ? (
+                    <MessageTree
+                        messageTree={replies}
+                        conversationId={props.conversationId}
+                    />
+                ) : null}
             </div>
         );
     }
@@ -443,7 +475,7 @@ export function MessageTree(props: { messageTree: Array<MessageTreeSchema> }) {
                             try {
                                 await store.updateMessageBranches({
                                     userId: user.id,
-                                    conversationId: conversation.id,
+                                    conversationId: props.conversationId,
                                     hiddenMessageIds: [selectedBranch.message.id],
                                     shownMessageId: null,
                                 });
@@ -451,11 +483,15 @@ export function MessageTree(props: { messageTree: Array<MessageTreeSchema> }) {
                                 toast.error(`Unable to change branches: ${e}`);
                             }
                         }}
+                        conversationId={props.conversationId}
                     />
                 </MessageProvider>
 
                 {selectedBranch.replies.length > 0 ? (
-                    <MessageTree messageTree={selectedBranch.replies} />
+                    <MessageTree
+                        messageTree={selectedBranch.replies}
+                        conversationId={props.conversationId}
+                    />
                 ) : null}
             </div>
         );
@@ -482,7 +518,7 @@ export function MessageTree(props: { messageTree: Array<MessageTreeSchema> }) {
                                 try {
                                     await store.updateMessageBranches({
                                         userId: user.id,
-                                        conversationId: conversation.id,
+                                        conversationId: props.conversationId,
                                         hiddenMessageIds: props.messageTree
                                             .map(({ message }) => message.id)
                                             .filter((id) => id !== tree.message.id),
@@ -494,7 +530,10 @@ export function MessageTree(props: { messageTree: Array<MessageTreeSchema> }) {
                             }}
                         >
                             <MessageProvider messageId={tree.message.id}>
-                                <MessageContent unsetBranch={null} />
+                                <MessageContent
+                                    unsetBranch={null}
+                                    conversationId={props.conversationId}
+                                />
                             </MessageProvider>
                         </CarouselItem>
                     ))}

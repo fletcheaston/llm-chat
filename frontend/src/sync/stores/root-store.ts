@@ -6,6 +6,7 @@ import {
     LargeLanguageModel,
     MemberSchema,
     MessageSchema,
+    UserSchema,
     createConversation as apiCreateConversation,
     createMessage as apiCreateMessage,
     updateConversation as apiUpdateConversation,
@@ -15,6 +16,16 @@ import { ConversationStore } from "./conversation-store";
 import { MemberStore } from "./member-store";
 import { MessageStore } from "./message-store";
 import { UserStore } from "./user-store";
+
+export interface MessageTreeSchema {
+    message: MessageSchema;
+    replies: MessageTreeSchema[];
+}
+
+export interface CustomizedConversationSchema extends ConversationSchema {
+    llms: Array<LargeLanguageModel>;
+    messageBranches: MemberSchema["messageBranches"];
+}
 
 export class RootStore {
     messageStore: MessageStore;
@@ -31,17 +42,8 @@ export class RootStore {
         makeAutoObservable(this);
     }
 
-    // Cross-store computed values and actions
-
-    // Get user details for a given user ID
-    getUserById(userId: string) {
-        return this.userStore.getUser(userId);
-    }
-
-    // Get conversation details for a given conversation ID
-    getConversationById(conversationId: string) {
-        return this.conversationStore.getConversation(conversationId);
-    }
+    /**************************************************************************/
+    /* Cross-store computed values and actions */
 
     // Clear all stores (for logout)
     async clearAll() {
@@ -83,8 +85,66 @@ export class RootStore {
         }
     }
 
-    // Helper functions for data operations
+    /**************************************************************************/
 
+    /* Conversation-specific computed values */
+    getMyConversation(
+        conversationId: string,
+        userId: string
+    ): CustomizedConversationSchema | undefined {
+        const conversation = this.conversationStore.getConversation(conversationId);
+        const member = this.memberStore.getMemberByUserAndConversation(userId, conversationId);
+
+        if (!conversation || !member) {
+            return undefined;
+        }
+
+        return {
+            ...conversation,
+            llms: member.llmsSelected,
+            messageBranches: member.messageBranches,
+        };
+    }
+
+    getMessageTree(conversationId: string): MessageTreeSchema[] {
+        const messages = this.messageStore.getMessagesByConversationId(conversationId);
+
+        // Build the tree structure
+        function buildTree(message: MessageSchema): MessageTreeSchema {
+            const replies = messages
+                .filter((msg) => msg.replyToId === message.id)
+                .map((msg) => buildTree(msg));
+
+            return {
+                message,
+                replies,
+            };
+        }
+
+        // Build the tree from our root messages
+        return messages
+            .filter((msg) => msg.replyToId === null)
+            .map((rootMessage) => buildTree(rootMessage));
+    }
+
+    getUserMapForConversation(conversationId: string): Record<string, UserSchema> {
+        const members = this.memberStore.getMembersByConversationId(conversationId);
+        const userIds = members.map((member) => member.userId);
+
+        const userMap: Record<string, UserSchema> = {};
+        userIds.forEach((userId) => {
+            const user = this.userStore.getUser(userId);
+            if (user) {
+                userMap[userId] = user;
+            }
+        });
+
+        return userMap;
+    }
+
+    /**************************************************************************/
+
+    /* Helper functions for data operations */
     async createConversation(
         userId: string,
         content: string,
@@ -349,6 +409,39 @@ export class RootStore {
             },
             path: { conversation_id: conversationId },
         });
+    }
+
+    /**************************************************************************/
+
+    /* Additional helper methods for components */
+
+    getMessagesByConversationId(conversationId: string): MessageSchema[] {
+        return this.messageStore.getMessagesByConversationId(conversationId);
+    }
+
+    getUserMessageCounts(conversationId: string): Record<string, number> {
+        const messages = this.getMessagesByConversationId(conversationId);
+        const userMap = this.getUserMapForConversation(conversationId);
+
+        return Object.fromEntries(
+            Object.keys(userMap).map((userId) => [
+                userId,
+                messages.filter((msg) => msg.authorId === userId).length,
+            ])
+        );
+    }
+
+    getLLMMessageCounts(conversationId: string): Record<string, number> {
+        const messages = this.getMessagesByConversationId(conversationId);
+        const llmCounts: Record<string, number> = {};
+
+        messages.forEach((msg) => {
+            if (msg.llm) {
+                llmCounts[msg.llm] = (llmCounts[msg.llm] || 0) + 1;
+            }
+        });
+
+        return llmCounts;
     }
 }
 
