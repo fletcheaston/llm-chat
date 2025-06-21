@@ -82,11 +82,7 @@ export class ConversationStore {
             runInAction(() => {
                 const existing = this.conversations.get(conversation.id);
 
-                if (existing) {
-                    this.conversations.set(conversation.id, { ...existing, ...conversation });
-                } else {
-                    this.conversations.set(conversation.id, conversation);
-                }
+                this.conversations.set(conversation.id, { ...existing, ...conversation });
             });
         } catch (error) {
             this.setError(error instanceof Error ? error.message : "Failed to save conversation");

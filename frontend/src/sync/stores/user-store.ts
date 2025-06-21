@@ -76,11 +76,7 @@ export class UserStore {
             runInAction(() => {
                 const existing = this.users.get(user.id);
 
-                if (existing) {
-                    this.users.set(user.id, { ...existing, ...user });
-                } else {
-                    this.users.set(user.id, user);
-                }
+                this.users.set(user.id, { ...existing, ...user });
             });
         } catch (error) {
             this.setError(error instanceof Error ? error.message : "Failed to save user");

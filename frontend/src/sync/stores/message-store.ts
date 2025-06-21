@@ -105,11 +105,7 @@ export class MessageStore {
             runInAction(() => {
                 const existing = this.messages.get(message.id);
 
-                if (existing) {
-                    this.messages.set(message.id, { ...existing, ...message });
-                } else {
-                    this.messages.set(message.id, message);
-                }
+                this.messages.set(message.id, { ...existing, ...message });
             });
         } catch (error) {
             this.setError(error instanceof Error ? error.message : "Failed to save message");

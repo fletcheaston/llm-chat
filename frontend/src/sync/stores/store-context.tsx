@@ -23,7 +23,7 @@ interface StoreProviderProps {
     errorComponent?: (error: string, retry: () => void) => ReactNode;
 }
 
-export function StoreProvider({ children, loadingComponent, errorComponent }: StoreProviderProps) {
+export function StoreProvider(props: StoreProviderProps) {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isInitializing, setIsInitializing] = useState(false);
     const [initializationError, setInitializationError] = useState<string | null>(null);
@@ -62,7 +62,7 @@ export function StoreProvider({ children, loadingComponent, errorComponent }: St
     if (isInitializing) {
         return (
             <StoreContext.Provider value={rootStore}>
-                {loadingComponent || <DefaultLoadingComponent />}
+                {props.loadingComponent || <DefaultLoadingComponent />}
             </StoreContext.Provider>
         );
     }
@@ -71,8 +71,8 @@ export function StoreProvider({ children, loadingComponent, errorComponent }: St
     if (initializationError) {
         return (
             <StoreContext.Provider value={rootStore}>
-                {errorComponent ? (
-                    errorComponent(initializationError, handleRetry)
+                {props.errorComponent ? (
+                    props.errorComponent(initializationError, handleRetry)
                 ) : (
                     <DefaultErrorComponent
                         error={initializationError}
@@ -84,7 +84,7 @@ export function StoreProvider({ children, loadingComponent, errorComponent }: St
     }
 
     // Show app when initialized
-    return <StoreContext.Provider value={rootStore}>{children}</StoreContext.Provider>;
+    return <StoreContext.Provider value={rootStore}>{props.children}</StoreContext.Provider>;
 }
 
 // Default loading component

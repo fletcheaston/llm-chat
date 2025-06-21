@@ -166,11 +166,8 @@ export class MemberStore {
 
             runInAction(() => {
                 const existing = this.members.get(member.id);
-                if (existing) {
-                    this.members.set(member.id, { ...existing, ...member });
-                } else {
-                    this.members.set(member.id, member);
-                }
+
+                this.members.set(member.id, { ...existing, ...member });
             });
         } catch (error) {
             this.setError(error instanceof Error ? error.message : "Failed to save member");
