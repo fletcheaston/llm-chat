@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useUser } from "@/components/auth";
 import { ModelMultiSelect } from "@/components/model-select";
 import { useConversation } from "@/sync/conversation";
-import { createMessage, setConversationLlms } from "@/sync/data";
+import { useStore } from "@/sync/stores";
 import { Button } from "@/ui/button";
 import { Textarea } from "@/ui/textarea";
 import { cn } from "@/utils";
@@ -16,6 +16,7 @@ export function CreateMessage() {
     /* State */
     const user = useUser();
     const conversation = useConversation();
+    const store = useStore();
 
     const [message, setMessage] = useState("");
 
@@ -37,7 +38,7 @@ export function CreateMessage() {
                     <ModelMultiSelect
                         llms={conversation.llms}
                         setLlms={(llms) => {
-                            setConversationLlms(user.id, conversation.id, llms).catch((e) => {
+                            store.setConversationLlms(user.id, conversation.id, llms).catch((e) => {
                                 toast.error(`Unable to update LLMs: ${e}`);
                             });
                         }}
@@ -64,7 +65,7 @@ export function CreateMessage() {
                             const replyToId = lastElement?.getAttribute("data-message-id") ?? null;
 
                             try {
-                                await createMessage({
+                                await store.createMessage({
                                     userId: user.id,
                                     replyToId,
                                     siblingMessageId: null,

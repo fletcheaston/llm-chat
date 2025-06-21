@@ -14,8 +14,8 @@ import { toast } from "sonner";
 
 import { MessageSchema } from "@/api";
 import { MessageTreeSchema, useConversation, useUserMap } from "@/sync/conversation";
-import { createMessage, updateMessageBranches } from "@/sync/data";
 import { MessageProvider, useMessage } from "@/sync/message";
+import { useStore } from "@/sync/stores";
 import { Button } from "@/ui/button";
 import {
     Carousel,
@@ -155,6 +155,7 @@ function BranchMyMessage(props: { message: MessageSchema; onEditStop: () => void
     /* State */
     const user = useUser();
     const conversation = useConversation();
+    const store = useStore();
 
     // Initial content comes from original message
     const contentRef = useRef(props.message.content);
@@ -186,7 +187,7 @@ function BranchMyMessage(props: { message: MessageSchema; onEditStop: () => void
                                 if (!contentRef.current) return;
 
                                 try {
-                                    await createMessage({
+                                    await store.createMessage({
                                         userId: user.id,
                                         replyToId: props.message.replyToId,
                                         siblingMessageId: props.message.id,
@@ -409,6 +410,7 @@ export function MessageTree(props: { messageTree: Array<MessageTreeSchema> }) {
     const user = useUser();
     const settings = useSettings();
     const conversation = useConversation();
+    const store = useStore();
 
     const selectedBranch = useMemo(() => {
         return props.messageTree.find((tree) => {
@@ -439,7 +441,7 @@ export function MessageTree(props: { messageTree: Array<MessageTreeSchema> }) {
                     <MessageContent
                         unsetBranch={async () => {
                             try {
-                                await updateMessageBranches({
+                                await store.updateMessageBranches({
                                     userId: user.id,
                                     conversationId: conversation.id,
                                     hiddenMessageIds: [selectedBranch.message.id],
@@ -478,7 +480,7 @@ export function MessageTree(props: { messageTree: Array<MessageTreeSchema> }) {
                             )}
                             onClick={async () => {
                                 try {
-                                    await updateMessageBranches({
+                                    await store.updateMessageBranches({
                                         userId: user.id,
                                         conversationId: conversation.id,
                                         hiddenMessageIds: props.messageTree
