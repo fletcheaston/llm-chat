@@ -159,12 +159,12 @@ function BranchMyMessage(props: {
     const store = useStore();
     const conversation = store.getMyConversation(props.conversationId, user.id);
 
+    // Initial content comes from original message
+    const contentRef = useRef(props.message.content);
+
     if (!conversation) {
         return null;
     }
-
-    // Initial content comes from original message
-    const contentRef = useRef(props.message.content);
 
     /**************************************************************************/
     /* Render */
