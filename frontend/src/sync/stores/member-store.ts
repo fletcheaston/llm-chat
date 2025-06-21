@@ -101,10 +101,6 @@ export class MemberStore {
         return this.allMembers.filter((member) => member.userId === userId);
     }
 
-    getMembersByAddedBy(addedById: string): MemberSchema[] {
-        return this.allMembers.filter((member) => member.addedById === addedById);
-    }
-
     // Find member by user and conversation
     getMemberByUserAndConversation(
         userId: string,
@@ -113,22 +109,6 @@ export class MemberStore {
         return this.allMembers.find(
             (member) => member.userId === userId && member.conversationId === conversationId
         );
-    }
-
-    // Check if message branch is visible for a member
-    isBranchVisible(memberId: string, messageId: string): boolean {
-        const member = this.members.get(memberId);
-        if (!member) return false;
-        return member.messageBranches[messageId] ?? false;
-    }
-
-    // Get all selected LLMs across all members
-    get allSelectedLLMs(): LargeLanguageModel[] {
-        const llmSet = new Set<LargeLanguageModel>();
-        this.members.forEach((member) => {
-            member.llmsSelected.forEach((llm) => llmSet.add(llm));
-        });
-        return Array.from(llmSet);
     }
 
     // Database persistence methods
