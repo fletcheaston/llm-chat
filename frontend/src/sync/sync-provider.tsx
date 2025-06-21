@@ -1,12 +1,36 @@
 import { ReactNode, useEffect, useRef } from "react";
 
-import { useIntervalEffect, useMountEffect } from "@react-hookz/web";
+import { useIntervalEffect } from "@react-hookz/web";
 import ReconnectingWebSocket from "reconnecting-websocket";
 
 import { globalSyncBootstrap } from "@/api";
 import { useAnonUser } from "@/components/auth";
+import { rootStore } from "@/sync/stores";
 
-import { SyncData, addSyncedData } from "./database";
+import { SyncData } from "./database";
+
+async function addToStore(data: SyncData) {
+    switch (data.type) {
+        case "conversation":
+            await rootStore.conversationStore.save(data.data);
+            return;
+
+        case "message":
+            await rootStore.messageStore.save(data.data);
+            return;
+
+        case "member":
+            await rootStore.memberStore.save(data.data);
+            return;
+
+        case "user":
+            await rootStore.userStore.save(data.data);
+            return;
+
+        default:
+            return data satisfies never;
+    }
+}
 
 export function SyncProvider(props: { children: ReactNode }) {
     /**************************************************************************/
@@ -25,14 +49,20 @@ export function SyncProvider(props: { children: ReactNode }) {
         wsRef.current.addEventListener("message", (event) => {
             const data = JSON.parse(event.data) as SyncData;
 
-            addSyncedData(data);
+            // Save data locally
+            addToStore(data);
         });
 
         return () => wsRef.current?.close();
     }, [user]);
 
     // On startup, full bootstrap
-    useMountEffect(() => {
+    useEffect(() => {
+        if (!user) return;
+
+        // Set timestamp for next bootstrap
+        localStorage.setItem("bootstrap-timestamp", new Date().toISOString());
+
         globalSyncBootstrap().then(({ data }) => {
             if (!data) {
                 throw new Error("Unable to bootstrap");
@@ -40,17 +70,17 @@ export function SyncProvider(props: { children: ReactNode }) {
 
             // Save data locally
             data.forEach((value) => {
-                addSyncedData(value);
+                addToStore(value);
             });
         });
-    });
+    }, [user]);
 
     // In case the WebSocket connection fails, sync data periodically
     useIntervalEffect(() => {
         // Pull the latest timestamp from local storage
         const bootstrapTimestamp = localStorage.getItem("bootstrap-timestamp");
 
-        // Update timestamp for next bootstrap
+        // Set timestamp for next bootstrap
         localStorage.setItem("bootstrap-timestamp", new Date().toISOString());
 
         globalSyncBootstrap({ query: { timestamp: bootstrapTimestamp } }).then(({ data }) => {
@@ -60,7 +90,7 @@ export function SyncProvider(props: { children: ReactNode }) {
 
             // Save data locally
             data.forEach((value) => {
-                addSyncedData(value);
+                addToStore(value);
             });
         });
     }, 10000);

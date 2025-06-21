@@ -22,45 +22,6 @@ export class RootStore {
 
     // Cross-store computed values and actions
 
-    // Get messages for the current conversation
-    get currentConversationMessages() {
-        const currentConversationId = this.conversationStore.currentConversationId;
-        if (!currentConversationId) return [];
-
-        return this.messageStore.getMessagesByConversationId(currentConversationId);
-    }
-
-    // Get members for the current conversation
-    get currentConversationMembers() {
-        const currentConversationId = this.conversationStore.currentConversationId;
-        if (!currentConversationId) return [];
-
-        return this.memberStore.getVisibleMembersByConversationId(currentConversationId);
-    }
-
-    // Get the current user's member record for the current conversation
-    get currentUserMember() {
-        const currentConversationId = this.conversationStore.currentConversationId;
-        const currentUserId = this.userStore.currentUserId;
-
-        if (!currentConversationId || !currentUserId) return null;
-
-        return this.memberStore.getMemberByUserAndConversation(
-            currentUserId,
-            currentConversationId
-        );
-    }
-
-    // Check if current user is owner of current conversation
-    get isCurrentUserConversationOwner() {
-        const currentConversation = this.conversationStore.currentConversation;
-        const currentUserId = this.userStore.currentUserId;
-
-        if (!currentConversation || !currentUserId) return false;
-
-        return currentConversation.ownerId === currentUserId;
-    }
-
     // Get user details for a given user ID
     getUserById(userId: string) {
         return this.userStore.getUser(userId);
@@ -72,21 +33,13 @@ export class RootStore {
     }
 
     // Clear all stores (for logout)
-    clearAll() {
-        this.messageStore.setMessages([]);
-        this.conversationStore.setConversations([]);
-        this.memberStore.setMembers([]);
-        this.userStore.logout();
-    }
-
-    // Check if any store is loading
-    get isLoading() {
-        return (
-            this.messageStore.isLoading ||
-            this.conversationStore.isLoading ||
-            this.memberStore.isLoading ||
-            this.userStore.isLoading
-        );
+    async clearAll() {
+        await Promise.all([
+            this.messageStore.clearAll(),
+            this.conversationStore.clearAll(),
+            this.memberStore.clearAll(),
+            this.userStore.clearAll(),
+        ]);
     }
 
     // Get all errors from stores
@@ -116,20 +69,6 @@ export class RootStore {
             ]);
         } catch (error) {
             console.error("Failed to initialize stores from database:", error);
-        }
-    }
-
-    // Save all stores to IndexedDB
-    async saveAllToDatabase(): Promise<void> {
-        try {
-            await Promise.all([
-                this.userStore.saveAllToDatabase(),
-                this.conversationStore.saveAllToDatabase(),
-                this.memberStore.saveAllToDatabase(),
-                this.messageStore.saveAllToDatabase(),
-            ]);
-        } catch (error) {
-            console.error("Failed to save all stores to database:", error);
         }
     }
 

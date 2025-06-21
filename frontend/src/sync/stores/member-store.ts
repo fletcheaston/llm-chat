@@ -13,7 +13,7 @@ export class MemberStore {
     }
 
     // Actions
-    setMembers(members: MemberSchema[]) {
+    private setMembers(members: MemberSchema[]) {
         runInAction(() => {
             this.members.clear();
             members.forEach((member) => {
@@ -22,34 +22,13 @@ export class MemberStore {
         });
     }
 
-    addMember(member: MemberSchema) {
-        runInAction(() => {
-            this.members.set(member.id, member);
-        });
-    }
-
-    updateMember(memberId: string, updates: Partial<MemberSchema>) {
-        runInAction(() => {
-            const existing = this.members.get(memberId);
-            if (existing) {
-                this.members.set(memberId, { ...existing, ...updates });
-            }
-        });
-    }
-
-    removeMember(memberId: string) {
-        runInAction(() => {
-            this.members.delete(memberId);
-        });
-    }
-
-    setLoading(loading: boolean) {
+    private setLoading(loading: boolean) {
         runInAction(() => {
             this.isLoading = loading;
         });
     }
 
-    setError(error: string | null) {
+    private setError(error: string | null) {
         runInAction(() => {
             this.error = error;
         });
@@ -181,30 +160,28 @@ export class MemberStore {
         }
     }
 
-    async saveToDatabase(member: MemberSchema): Promise<void> {
+    async save(member: MemberSchema): Promise<void> {
         try {
             await db.members.put(member);
-            this.addMember(member);
+
+            runInAction(() => {
+                const existing = this.members.get(member.id);
+                if (existing) {
+                    this.members.set(member.id, { ...existing, ...member });
+                } else {
+                    this.members.set(member.id, member);
+                }
+            });
         } catch (error) {
             this.setError(error instanceof Error ? error.message : "Failed to save member");
         }
     }
 
-    async saveAllToDatabase(): Promise<void> {
-        try {
-            const members = Array.from(this.members.values());
-            await db.members.bulkPut(members);
-        } catch (error) {
-            this.setError(error instanceof Error ? error.message : "Failed to save members");
-        }
-    }
+    async clearAll(): Promise<void> {
+        await db.members.clear();
 
-    async deleteFromDatabase(memberId: string): Promise<void> {
-        try {
-            await db.members.delete(memberId);
-            this.removeMember(memberId);
-        } catch (error) {
-            this.setError(error instanceof Error ? error.message : "Failed to delete member");
-        }
+        runInAction(() => {
+            this.members.clear();
+        });
     }
 }

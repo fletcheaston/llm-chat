@@ -13,7 +13,7 @@ export class MessageStore {
     }
 
     // Actions
-    setMessages(messages: MessageSchema[]) {
+    private setMessages(messages: MessageSchema[]) {
         runInAction(() => {
             this.messages.clear();
             messages.forEach((message) => {
@@ -22,34 +22,13 @@ export class MessageStore {
         });
     }
 
-    addMessage(message: MessageSchema) {
-        runInAction(() => {
-            this.messages.set(message.id, message);
-        });
-    }
-
-    updateMessage(messageId: string, updates: Partial<MessageSchema>) {
-        runInAction(() => {
-            const existing = this.messages.get(messageId);
-            if (existing) {
-                this.messages.set(messageId, { ...existing, ...updates });
-            }
-        });
-    }
-
-    removeMessage(messageId: string) {
-        runInAction(() => {
-            this.messages.delete(messageId);
-        });
-    }
-
-    setLoading(loading: boolean) {
+    private setLoading(loading: boolean) {
         runInAction(() => {
             this.isLoading = loading;
         });
     }
 
-    setError(error: string | null) {
+    private setError(error: string | null) {
         runInAction(() => {
             this.error = error;
         });
@@ -119,30 +98,29 @@ export class MessageStore {
         }
     }
 
-    async saveToDatabase(message: MessageSchema): Promise<void> {
+    async save(message: MessageSchema): Promise<void> {
         try {
             await db.messages.put(message);
-            this.addMessage(message);
+
+            runInAction(() => {
+                const existing = this.messages.get(message.id);
+
+                if (existing) {
+                    this.messages.set(message.id, { ...existing, ...message });
+                } else {
+                    this.messages.set(message.id, message);
+                }
+            });
         } catch (error) {
             this.setError(error instanceof Error ? error.message : "Failed to save message");
         }
     }
 
-    async saveAllToDatabase(): Promise<void> {
-        try {
-            const messages = Array.from(this.messages.values());
-            await db.messages.bulkPut(messages);
-        } catch (error) {
-            this.setError(error instanceof Error ? error.message : "Failed to save messages");
-        }
-    }
+    async clearAll(): Promise<void> {
+        await db.messages.clear();
 
-    async deleteFromDatabase(messageId: string): Promise<void> {
-        try {
-            await db.messages.delete(messageId);
-            this.removeMessage(messageId);
-        } catch (error) {
-            this.setError(error instanceof Error ? error.message : "Failed to delete message");
-        }
+        runInAction(() => {
+            this.messages.clear();
+        });
     }
 }

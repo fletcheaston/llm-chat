@@ -23,12 +23,7 @@ interface StoreProviderProps {
     errorComponent?: (error: string, retry: () => void) => ReactNode;
 }
 
-export function StoreProvider({
-    children,
-    store = rootStore,
-    loadingComponent,
-    errorComponent,
-}: StoreProviderProps) {
+export function StoreProvider({ children, loadingComponent, errorComponent }: StoreProviderProps) {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isInitializing, setIsInitializing] = useState(false);
     const [initializationError, setInitializationError] = useState<string | null>(null);
@@ -40,7 +35,7 @@ export function StoreProvider({
         setInitializationError(null);
 
         try {
-            await store.initializeFromDatabase();
+            await rootStore.initializeFromDatabase();
             setIsInitialized(true);
         } catch (error) {
             const errorMessage =
@@ -66,7 +61,7 @@ export function StoreProvider({
     // Show loading state
     if (isInitializing) {
         return (
-            <StoreContext.Provider value={store}>
+            <StoreContext.Provider value={rootStore}>
                 {loadingComponent || <DefaultLoadingComponent />}
             </StoreContext.Provider>
         );
@@ -75,7 +70,7 @@ export function StoreProvider({
     // Show error state
     if (initializationError) {
         return (
-            <StoreContext.Provider value={store}>
+            <StoreContext.Provider value={rootStore}>
                 {errorComponent ? (
                     errorComponent(initializationError, handleRetry)
                 ) : (
@@ -89,7 +84,7 @@ export function StoreProvider({
     }
 
     // Show app when initialized
-    return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
+    return <StoreContext.Provider value={rootStore}>{children}</StoreContext.Provider>;
 }
 
 // Default loading component
@@ -152,9 +147,11 @@ function DefaultErrorComponent({ error, onRetry }: DefaultErrorComponentProps) {
 // Hook to use the store
 export function useStore(): RootStore {
     const store = useContext(StoreContext);
+
     if (!store) {
         throw new Error("useStore must be used within a StoreProvider");
     }
+
     return store;
 }
 
