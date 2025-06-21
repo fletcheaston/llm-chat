@@ -22,13 +22,13 @@ export const CreateMessage = observer(function CreateMessage({
     const store = useStore();
     const conversation = store.getMyConversation(conversationId, user.id);
 
-    if (!conversation) {
-        return null;
-    }
-
     const [message, setMessage] = useState("");
 
     const empty = message === "";
+
+    if (!conversation) {
+        return null;
+    }
 
     /**************************************************************************/
     /* Render */
