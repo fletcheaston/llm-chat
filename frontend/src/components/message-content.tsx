@@ -436,15 +436,17 @@ export function MessageTree(props: {
     const store = useStore();
     const conversation = store.getMyConversation(props.conversationId, user.id);
 
-    if (!conversation) {
-        return null;
-    }
-
     const selectedBranch = useMemo(() => {
+        if (!conversation) return;
+
         return props.messageTree.find((tree) => {
             return conversation.messageBranches[tree.message.id];
         });
-    }, [props.messageTree, conversation.messageBranches]);
+    }, [props.messageTree, conversation?.messageBranches]);
+
+    if (!conversation) {
+        return null;
+    }
 
     /**************************************************************************/
     /* Render */

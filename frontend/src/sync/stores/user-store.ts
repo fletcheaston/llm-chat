@@ -1,4 +1,4 @@
-import { makeAutoObservable, runInAction } from "mobx";
+import { makeAutoObservable, runInAction, toJS } from "mobx";
 
 import { UserSchema } from "@/api";
 import { db } from "@/sync/database";
@@ -71,7 +71,7 @@ export class UserStore {
 
     async save(user: UserSchema): Promise<void> {
         try {
-            await db.users.put(user);
+            await db.users.put(toJS(user));
 
             runInAction(() => {
                 const existing = this.users.get(user.id);

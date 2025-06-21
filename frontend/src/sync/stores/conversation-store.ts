@@ -1,4 +1,4 @@
-import { makeAutoObservable, runInAction } from "mobx";
+import { makeAutoObservable, runInAction, toJS } from "mobx";
 
 import { ConversationSchema } from "@/api";
 import { db } from "@/sync/database";
@@ -77,7 +77,7 @@ export class ConversationStore {
 
     async save(conversation: ConversationSchema): Promise<void> {
         try {
-            await db.conversations.put(conversation);
+            await db.conversations.put(toJS(conversation));
 
             runInAction(() => {
                 const existing = this.conversations.get(conversation.id);

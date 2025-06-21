@@ -1,4 +1,4 @@
-import { makeAutoObservable, runInAction } from "mobx";
+import { makeAutoObservable, runInAction, toJS } from "mobx";
 
 import { LargeLanguageModel, MessageSchema } from "@/api";
 import { db } from "@/sync/database";
@@ -100,7 +100,7 @@ export class MessageStore {
 
     async save(message: MessageSchema): Promise<void> {
         try {
-            await db.messages.put(message);
+            await db.messages.put(toJS(message));
 
             runInAction(() => {
                 const existing = this.messages.get(message.id);

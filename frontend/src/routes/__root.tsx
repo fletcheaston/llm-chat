@@ -70,19 +70,17 @@ function Authenticated() {
     /**************************************************************************/
     /* Render */
     return (
-        <StoreProvider>
-            <SyncProvider>
+        <SyncProvider>
+            <SidebarProvider>
                 <SidebarProvider>
-                    <SidebarProvider>
-                        <div className="relative">
-                            <SidebarShared />
-                        </div>
+                    <div className="relative">
+                        <SidebarShared />
+                    </div>
 
-                        <Outlet />
-                    </SidebarProvider>
+                    <Outlet />
                 </SidebarProvider>
-            </SyncProvider>
-        </StoreProvider>
+            </SidebarProvider>
+        </SyncProvider>
     );
 }
 
@@ -107,7 +105,9 @@ function RouteComponent() {
 
             <body className="h-full overflow-y-auto overscroll-none">
                 <main>
-                    {user === null ? <Anonymous /> : <Authenticated />}
+                    <StoreProvider>
+                        {user === null ? <Anonymous /> : <Authenticated />}
+                    </StoreProvider>
 
                     <Toaster
                         expand

@@ -18,10 +18,10 @@ const db = new Dexie("F3Chat") as Dexie & {
 };
 
 db.version(1).stores({
-    messages: "id,conversationId,replyToId,authorId,created",
-    conversations: "id,created",
-    members: "id,conversationId,userId,[conversationId+userId],created",
-    users: "id,created",
+    messages: "id,conversationId",
+    conversations: "id",
+    members: "id,conversationId",
+    users: "id",
 });
 
 export { db };

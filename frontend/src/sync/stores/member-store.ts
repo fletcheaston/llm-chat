@@ -1,4 +1,4 @@
-import { makeAutoObservable, runInAction } from "mobx";
+import { makeAutoObservable, runInAction, toJS } from "mobx";
 
 import { LargeLanguageModel, MemberSchema } from "@/api";
 import { db } from "@/sync/database";
@@ -81,14 +81,6 @@ export class MemberStore {
         return Array.from(this.members.values());
     }
 
-    get visibleMembers(): MemberSchema[] {
-        return this.allMembers.filter((member) => !member.hidden);
-    }
-
-    get hiddenMembers(): MemberSchema[] {
-        return this.allMembers.filter((member) => member.hidden);
-    }
-
     get membersByConversation() {
         const grouped = new Map<string, MemberSchema[]>();
         this.members.forEach((member) => {
@@ -103,14 +95,6 @@ export class MemberStore {
 
     getMembersByConversationId(conversationId: string): MemberSchema[] {
         return this.membersByConversation.get(conversationId) || [];
-    }
-
-    getVisibleMembersByConversationId(conversationId: string): MemberSchema[] {
-        return this.getMembersByConversationId(conversationId).filter((member) => !member.hidden);
-    }
-
-    getMember(memberId: string): MemberSchema | undefined {
-        return this.members.get(memberId);
     }
 
     getMembersByUserId(userId: string): MemberSchema[] {
@@ -162,7 +146,12 @@ export class MemberStore {
 
     async save(member: MemberSchema): Promise<void> {
         try {
-            await db.members.put(member);
+            // Partial observables are not recursively converted
+            await db.members.put({
+                ...toJS(member),
+                llmsSelected: toJS(member.llmsSelected),
+                messageBranches: toJS(member.messageBranches),
+            });
 
             runInAction(() => {
                 const existing = this.members.get(member.id);
