@@ -466,6 +466,27 @@ export class RootStore {
             };
         });
     }
+
+    getDailyLLMResponseCount(userId: string): number {
+        const oneDayAgo = new Date();
+        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+        // Get all messages from the user
+        const userMessages = this.messageStore.allMessages.filter(
+            (message) => message.authorId === userId
+        );
+        const userMessageIds = new Set(userMessages.map((msg) => msg.id));
+
+        // Count LLM replies to those messages created in the last 24 hours
+        return this.messageStore.allMessages.filter((message) => {
+            return (
+                message.llm !== null &&
+                message.replyToId !== null &&
+                userMessageIds.has(message.replyToId) &&
+                new Date(message.created) >= oneDayAgo
+            );
+        }).length;
+    }
 }
 
 // Create a singleton instance

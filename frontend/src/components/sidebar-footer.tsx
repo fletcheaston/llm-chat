@@ -1,35 +1,22 @@
 import { Link } from "@tanstack/react-router";
+import { observer } from "mobx-react-lite";
 
 import { useUser } from "@/components/auth";
-import { db } from "@/sync/database";
-import { useCachedLiveQuery } from "@/sync/utils";
+import { useStore } from "@/sync/stores";
 import { Button } from "@/ui/button";
 import { Separator } from "@/ui/separator";
 
-function DailyMessageCounter() {
+const DailyMessageCounter = observer(function DailyMessageCounter() {
     /**************************************************************************/
     /* State */
     const user = useUser();
-
-    const messageCount = useCachedLiveQuery(async () => {
-        const oneDayAgo = new Date();
-        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-
-        // First, get all messages from the user in the last day
-        const userMessages = await db.messages.where("authorId").equals(user.id).toArray();
-
-        // Then count LLM replies to those messages
-        return db.messages
-            .where("replyToId")
-            .anyOf(userMessages.map((msg) => msg.id))
-            .and((message) => message.llm !== null && new Date(message.created) >= oneDayAgo)
-            .count();
-    }, [user.id]);
+    const store = useStore();
+    const messageCount = store.getDailyLLMResponseCount(user.id);
 
     /**************************************************************************/
     /* Render */
     return <p className="text-xs tabular-nums">{messageCount} / 100</p>;
-}
+});
 
 export function SidebarFooter() {
     /**************************************************************************/
