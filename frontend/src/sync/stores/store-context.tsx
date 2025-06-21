@@ -175,8 +175,3 @@ export function useUserStore() {
     const { userStore } = useStore();
     return userStore;
 }
-
-// Higher-order component for making components reactive to MobX changes
-export function withStore<P extends object>(Component: ComponentType<P>): ComponentType<P> {
-    return observer(Component as FunctionComponent<P>);
-}

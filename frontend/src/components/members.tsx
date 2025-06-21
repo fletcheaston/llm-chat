@@ -7,7 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 
 import { llmToName } from "./models";
 
-export const MembersDialog = observer(function MembersDialog({ conversationId }: { conversationId: string }) {
+export const MembersDialog = observer(function MembersDialog({
+    conversationId,
+}: {
+    conversationId: string;
+}) {
     /**************************************************************************/
     /* State */
     const store = useStore();

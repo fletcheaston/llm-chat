@@ -57,13 +57,18 @@ export function CreateConversation() {
                             setMessage("");
 
                             try {
-                                await store.createConversation(user.id, message, llms, async (id) => {
-                                    // Navigate to the chat page
-                                    await navigate({
-                                        to: "/chat/$chatId",
-                                        params: { chatId: id },
-                                    });
-                                });
+                                await store.createConversation(
+                                    user.id,
+                                    message,
+                                    llms,
+                                    async (id) => {
+                                        // Navigate to the chat page
+                                        await navigate({
+                                            to: "/chat/$chatId",
+                                            params: { chatId: id },
+                                        });
+                                    }
+                                );
                             } catch (e) {
                                 toast.error(`Unable to create chat: ${e}`);
                                 setMessage(tempMessage);

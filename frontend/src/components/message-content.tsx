@@ -13,7 +13,6 @@ import {
 import { toast } from "sonner";
 
 import { MessageSchema } from "@/api";
-import { MessageProvider, useMessage } from "@/sync/message";
 import { MessageTreeSchema, useStore } from "@/sync/stores";
 import { Button } from "@/ui/button";
 import {
@@ -372,13 +371,18 @@ function OtherMessage(props: {
 export function MessageContent(props: {
     unsetBranch: (() => void) | null;
     conversationId: string;
+    messageId: string;
 }) {
     /**************************************************************************/
     /* State */
     const self = useUser();
     const store = useStore();
     const userMap = store.getUserMapForConversation(props.conversationId);
-    const message = useMessage();
+    const message = store.messageStore.getMessage(props.messageId);
+
+    if (!message) {
+        return <div className="min-h-[70px]" />;
+    }
 
     /**************************************************************************/
     /* Render */
@@ -449,12 +453,11 @@ export function MessageTree(props: {
 
         return (
             <div className="flex flex-col gap-10">
-                <MessageProvider messageId={message.id}>
-                    <MessageContent
-                        unsetBranch={null}
-                        conversationId={props.conversationId}
-                    />
-                </MessageProvider>
+                <MessageContent
+                    unsetBranch={null}
+                    conversationId={props.conversationId}
+                    messageId={message.id}
+                />
 
                 {replies.length > 0 ? (
                     <MessageTree
@@ -469,23 +472,22 @@ export function MessageTree(props: {
     if (selectedBranch) {
         return (
             <div className="flex flex-col gap-10">
-                <MessageProvider messageId={selectedBranch.message.id}>
-                    <MessageContent
-                        unsetBranch={async () => {
-                            try {
-                                await store.updateMessageBranches({
-                                    userId: user.id,
-                                    conversationId: props.conversationId,
-                                    hiddenMessageIds: [selectedBranch.message.id],
-                                    shownMessageId: null,
-                                });
-                            } catch (e) {
-                                toast.error(`Unable to change branches: ${e}`);
-                            }
-                        }}
-                        conversationId={props.conversationId}
-                    />
-                </MessageProvider>
+                <MessageContent
+                    unsetBranch={async () => {
+                        try {
+                            await store.updateMessageBranches({
+                                userId: user.id,
+                                conversationId: props.conversationId,
+                                hiddenMessageIds: [selectedBranch.message.id],
+                                shownMessageId: null,
+                            });
+                        } catch (e) {
+                            toast.error(`Unable to change branches: ${e}`);
+                        }
+                    }}
+                    conversationId={props.conversationId}
+                    messageId={selectedBranch.message.id}
+                />
 
                 {selectedBranch.replies.length > 0 ? (
                     <MessageTree
@@ -529,12 +531,11 @@ export function MessageTree(props: {
                                 }
                             }}
                         >
-                            <MessageProvider messageId={tree.message.id}>
-                                <MessageContent
-                                    unsetBranch={null}
-                                    conversationId={props.conversationId}
-                                />
-                            </MessageProvider>
+                            <MessageContent
+                                unsetBranch={null}
+                                conversationId={props.conversationId}
+                                messageId={tree.message.id}
+                            />
                         </CarouselItem>
                     ))}
                 </CarouselContent>

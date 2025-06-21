@@ -14,5 +14,4 @@ export {
     useConversationStore,
     useMemberStore,
     useUserStore,
-    withStore,
 } from "./store-context";

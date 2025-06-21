@@ -11,7 +11,11 @@ export const Route = createFileRoute("/chat/$chatId")({
     component: RouteComponent,
 });
 
-const Conversation = observer(function Conversation({ conversationId }: { conversationId: string }) {
+const Conversation = observer(function Conversation({
+    conversationId,
+}: {
+    conversationId: string;
+}) {
     /**************************************************************************/
     /* State */
     const store = useStore();
@@ -28,7 +32,10 @@ const Conversation = observer(function Conversation({ conversationId }: { conver
             </div>
 
             <div className="grow px-4 pb-12 text-sm">
-                <MessageTree messageTree={messageTree} conversationId={conversationId} />
+                <MessageTree
+                    messageTree={messageTree}
+                    conversationId={conversationId}
+                />
             </div>
 
             <div className="sticky bottom-0 rounded-xl">
