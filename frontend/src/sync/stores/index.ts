@@ -4,7 +4,11 @@ export { ConversationStore } from "./conversation-store";
 export { MemberStore } from "./member-store";
 export { UserStore } from "./user-store";
 export { RootStore, rootStore } from "./root-store";
-export type { MessageTreeSchema, CustomizedConversationSchema } from "./root-store";
+export type {
+    MessageTreeSchema,
+    CustomizedConversationSchema,
+    ConversationWithMemberData,
+} from "./root-store";
 
 // Export context and hooks
 export {

@@ -1,14 +1,4 @@
-import {
-    ComponentType,
-    FunctionComponent,
-    ReactNode,
-    createContext,
-    useContext,
-    useEffect,
-    useState,
-} from "react";
-
-import { observer } from "mobx-react-lite";
+import { ReactNode, createContext, useContext, useEffect, useState } from "react";
 
 import { RootStore, rootStore } from "./root-store";
 

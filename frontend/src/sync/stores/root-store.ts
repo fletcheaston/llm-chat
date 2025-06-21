@@ -27,6 +27,11 @@ export interface CustomizedConversationSchema extends ConversationSchema {
     messageBranches: MemberSchema["messageBranches"];
 }
 
+export interface ConversationWithMemberData extends ConversationSchema {
+    hidden: boolean;
+    llmsSelected: MemberSchema["llmsSelected"];
+}
+
 export class RootStore {
     messageStore: MessageStore;
     conversationStore: ConversationStore;
@@ -442,6 +447,24 @@ export class RootStore {
         });
 
         return llmCounts;
+    }
+
+    getConversationsForUser(userId: string): ConversationWithMemberData[] {
+        const conversations = this.conversationStore.sortedConversations;
+        const userMembers = this.memberStore.getMembersByUserId(userId);
+
+        const memberMap = Object.fromEntries(
+            userMembers.map((member) => [member.conversationId, member])
+        );
+
+        return conversations.map((conversation) => {
+            const member = memberMap[conversation.id];
+            return {
+                ...conversation,
+                hidden: member?.hidden || false,
+                llmsSelected: member?.llmsSelected || [],
+            };
+        });
     }
 }
 
