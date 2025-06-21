@@ -5,7 +5,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig([
-    globalIgnores(["dist/*"]),
+    globalIgnores(["dist/*", "src/api/*"]),
     {
         files: ["src/**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
         plugins: { js },
@@ -16,6 +16,7 @@ export default defineConfig([
             pluginReact.configs.flat["jsx-runtime"],
         ],
         rules: {
+            "func-style": ["error", "declaration"],
             "react/no-unescaped-entities": 0,
             "@typescript-eslint/no-explicit-any": 0,
             "@typescript-eslint/no-unused-vars": [
