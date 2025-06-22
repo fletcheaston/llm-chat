@@ -22,7 +22,7 @@ django_asgi_app = get_asgi_application()
 
 from django.conf import settings  # noqa: E402
 
-from chats.websockets import urlpatterns  # noqa: E402
+from backend.websockets import urlpatterns  # noqa: E402
 
 ws_router = (
     URLRouter(urlpatterns)
