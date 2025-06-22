@@ -1,4 +1,5 @@
 import { makeAutoObservable, runInAction, toJS } from "mobx";
+import { computedFn } from "mobx-utils";
 
 import { UserSchema } from "@/api";
 import { db } from "@/sync/database";
@@ -47,14 +48,15 @@ export class UserStore {
         return this.users.get(userId);
     }
 
-    searchUsers(query: string): UserSchema[] {
+    // Memoized user search for better performance
+    searchUsers = computedFn((query: string): UserSchema[] => {
         if (!query.trim()) return this.sortedUsers;
 
         const lowerQuery = query.toLowerCase();
         return this.allUsers
             .filter((user) => user.name.toLowerCase().includes(lowerQuery))
             .sort((a, b) => a.name.localeCompare(b.name));
-    }
+    });
 
     // Database persistence methods
     async loadFromDatabase(): Promise<void> {

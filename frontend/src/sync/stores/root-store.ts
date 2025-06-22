@@ -1,4 +1,5 @@
 import { makeAutoObservable } from "mobx";
+import { computedFn } from "mobx-utils";
 import { toast } from "sonner";
 
 import {
@@ -92,7 +93,8 @@ export class RootStore {
     /**************************************************************************/
 
     /* Conversation-specific computed values */
-    getMyConversation(conversationId: string, userId: string): MyConversationSchema | undefined {
+    // Memoized conversation with member data computation
+    getMyConversation = computedFn((conversationId: string, userId: string): MyConversationSchema | undefined => {
         const conversation = this.conversationStore.getConversation(conversationId);
         const member = this.memberStore.getMemberByUserAndConversation(userId, conversationId);
 
@@ -105,9 +107,10 @@ export class RootStore {
             llms: member.llmsSelected,
             messageBranches: member.messageBranches,
         };
-    }
+    });
 
-    getMessageTree(conversationId: string): MessageTreeSchema[] {
+    // Memoized message tree computation for better performance
+    getMessageTree = computedFn((conversationId: string): MessageTreeSchema[] => {
         const messages = this.messageStore.getMessagesByConversationId(conversationId);
 
         // Build the tree structure
@@ -126,7 +129,7 @@ export class RootStore {
         return messages
             .filter((msg) => msg.replyToId === null)
             .map((rootMessage) => buildTree(rootMessage));
-    }
+    });
 
     /**************************************************************************/
 
@@ -432,7 +435,8 @@ export class RootStore {
         return llmCounts;
     }
 
-    getConversationsForUser(userId: string): ConversationWithMemberData[] {
+    // Memoized conversations for user computation
+    getConversationsForUser = computedFn((userId: string): ConversationWithMemberData[] => {
         const conversations = this.conversationStore.sortedConversations;
         const userMembers = this.memberStore.getMembersByUserId(userId);
 
@@ -448,9 +452,10 @@ export class RootStore {
                 llmsSelected: member?.llmsSelected || [],
             };
         });
-    }
+    });
 
-    getDailyLLMResponseCount(userId: string): number {
+    // Memoized daily LLM response count computation
+    getDailyLLMResponseCount = computedFn((userId: string): number => {
         const oneDayAgo = new Date();
         oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
@@ -469,7 +474,7 @@ export class RootStore {
                 new Date(message.created) >= oneDayAgo
             );
         }).length;
-    }
+    });
 
     async unsetMessageBranch(messageId: string, userId: string) {
         // Get the message to find its siblings

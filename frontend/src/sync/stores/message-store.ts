@@ -1,4 +1,5 @@
 import { makeAutoObservable, runInAction, toJS } from "mobx";
+import { computedFn } from "mobx-utils";
 
 import { LargeLanguageModel, MessageSchema } from "@/api";
 import { db } from "@/sync/database";
@@ -57,9 +58,10 @@ export class MessageStore {
         return grouped;
     }
 
-    getMessagesByConversationId(conversationId: string): MessageSchema[] {
+    // Memoized messages by conversation for better performance
+    getMessagesByConversationId = computedFn((conversationId: string): MessageSchema[] => {
         return this.messagesByConversation.get(conversationId) || [];
-    }
+    });
 
     getMessage(messageId: string): MessageSchema | undefined {
         return this.messages.get(messageId);

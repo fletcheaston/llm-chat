@@ -1,4 +1,5 @@
 import { makeAutoObservable, runInAction, toJS } from "mobx";
+import { computedFn } from "mobx-utils";
 
 import { ConversationSchema } from "@/api";
 import { db } from "@/sync/database";
@@ -49,14 +50,15 @@ export class ConversationStore {
         return this.conversations.get(conversationId);
     }
 
-    searchConversations(query: string): ConversationSchema[] {
+    // Memoized search for better performance
+    searchConversations = computedFn((query: string): ConversationSchema[] => {
         if (!query.trim()) return this.sortedConversations;
 
         const lowerQuery = query.toLowerCase();
         return this.allConversations
             .filter((conversation) => conversation.title.toLowerCase().includes(lowerQuery))
             .sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime());
-    }
+    });
 
     get recentConversations(): ConversationSchema[] {
         return this.sortedConversations.slice(0, 10);
