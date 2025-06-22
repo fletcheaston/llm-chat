@@ -1,4 +1,4 @@
-import * as React from "react";
+import { ComponentProps } from "react";
 
 import { Slot } from "@radix-ui/react-slot";
 import { type VariantProps, cva } from "class-variance-authority";
@@ -35,7 +35,7 @@ function Button({
     tooltip,
     asChild = false,
     ...props
-}: React.ComponentProps<"button"> &
+}: ComponentProps<"button"> &
     VariantProps<typeof buttonVariants> & {
         tooltip: string | null;
         asChild?: boolean;

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import * as React from "react";
 
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowUpIcon } from "lucide-react";
@@ -8,7 +7,7 @@ import { toast } from "sonner";
 import { LargeLanguageModel } from "@/api";
 import { useUser } from "@/components/auth";
 import { ModelMultiSelect } from "@/components/model-select";
-import { createConversation } from "@/sync/data";
+import { useStore } from "@/sync/stores";
 import { Button } from "@/ui/button";
 import { Textarea } from "@/ui/textarea";
 import { cn } from "@/utils";
@@ -17,6 +16,7 @@ export function CreateConversation() {
     /**************************************************************************/
     /* State */
     const user = useUser();
+    const store = useStore();
 
     const navigate = useNavigate();
 
@@ -57,13 +57,18 @@ export function CreateConversation() {
                             setMessage("");
 
                             try {
-                                await createConversation(user.id, message, llms, async (id) => {
-                                    // Navigate to the chat page
-                                    await navigate({
-                                        to: "/chat/$chatId",
-                                        params: { chatId: id },
-                                    });
-                                });
+                                await store.createConversation(
+                                    user.id,
+                                    message,
+                                    llms,
+                                    async (id) => {
+                                        // Navigate to the chat page
+                                        await navigate({
+                                            to: "/chat/$chatId",
+                                            params: { chatId: id },
+                                        });
+                                    }
+                                );
                             } catch (e) {
                                 toast.error(`Unable to create chat: ${e}`);
                                 setMessage(tempMessage);

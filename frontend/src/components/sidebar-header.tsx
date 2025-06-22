@@ -1,5 +1,3 @@
-import * as React from "react";
-
 import { Link } from "@tanstack/react-router";
 
 import { Button } from "@/ui/button";

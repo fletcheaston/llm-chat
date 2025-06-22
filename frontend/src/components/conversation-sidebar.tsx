@@ -1,11 +1,13 @@
-import React, { useCallback, useMemo, useState } from "react";
+import { MouseEvent, useCallback, useMemo, useState } from "react";
 
 import { Link, useLocation } from "@tanstack/react-router";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { observer } from "mobx-react-lite";
 import { toast } from "sonner";
 
 import { updateConversation } from "@/api";
-import { useConversations } from "@/sync/conversations";
+import { useUser } from "@/components/auth";
+import { ConversationWithMemberData, useStore } from "@/sync/stores";
 import { Button } from "@/ui/button";
 import {
     SidebarGroupContent,
@@ -22,7 +24,7 @@ function ConversationLink(props: { id: string; title: string; hidden: boolean; p
     const selected = props.pathname.includes(props.id);
 
     const toggleHidden = useCallback(
-        async (event: React.MouseEvent) => {
+        async (event: MouseEvent) => {
             event.preventDefault();
             event.stopPropagation();
 
@@ -77,21 +79,25 @@ function ConversationLink(props: { id: string; title: string; hidden: boolean; p
     );
 }
 
-export function ConversationSidebar() {
+export const ConversationSidebar = observer(function ConversationSidebar() {
     /**************************************************************************/
     /* State */
     const [showAll, setShowAll] = useState(false);
+    const user = useUser();
+    const store = useStore();
 
     const pathname = useLocation({ select: (state) => state.pathname });
 
-    const conversations = useConversations();
+    const conversations = store.getConversationsForUser(user.id);
 
     const filteredConversations = useMemo(() => {
         if (showAll) {
             return conversations;
         }
 
-        return conversations.filter((conversation) => !conversation.hidden);
+        return conversations.filter(
+            (conversation: ConversationWithMemberData) => !conversation.hidden
+        );
     }, [showAll, conversations]);
 
     /**************************************************************************/
@@ -129,4 +135,4 @@ export function ConversationSidebar() {
             </SidebarGroupContent>
         </>
     );
-}
+});

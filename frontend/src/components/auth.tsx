@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useState } from "react";
+import { ReactNode, createContext, useCallback, useContext, useState } from "react";
 
 import { useMountEffect } from "@react-hookz/web";
 import { toast } from "sonner";
@@ -14,7 +14,7 @@ const UpdateSettingsContext = createContext<
 
 type SettingKey = Omit<SettingSchema, "id" | "created" | "modified">;
 
-export function AuthProvider(props: { children: React.ReactNode }) {
+export function AuthProvider(props: { children: ReactNode }) {
     /**************************************************************************/
     /* State */
     const [user, setUser] = useState<UserSchema | undefined | null>(undefined);

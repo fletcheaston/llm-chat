@@ -1,4 +1,4 @@
-import React from "react";
+import { ReactNode } from "react";
 
 import hljs from "highlight.js/lib/core";
 import bash from "highlight.js/lib/languages/bash";
@@ -70,7 +70,7 @@ export const classNameToLanguage: Record<string, Language> = {
     "language-typescript": "typescript",
 };
 
-function highlightCode(code: string, language: Language): React.ReactNode {
+function highlightCode(code: string, language: Language): ReactNode {
     return parse(hljs.highlight(code, { language }).value);
 }
 

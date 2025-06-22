@@ -1,8 +1,7 @@
-import * as React from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { LogOutIcon, PanelLeftIcon, PlusIcon, Settings2Icon } from "lucide-react";
 
-import { Link } from "@tanstack/react-router";
-import { PanelLeftIcon, PlusIcon, Settings2Icon } from "lucide-react";
-
+import { logout } from "@/api";
 import { Button } from "@/ui/button";
 import { useSidebar } from "@/ui/sidebar";
 import { cn } from "@/utils";
@@ -10,6 +9,8 @@ import { cn } from "@/utils";
 export function SidebarButtons() {
     /**************************************************************************/
     /* State */
+    const navigate = useNavigate();
+
     const { open, toggleSidebar } = useSidebar();
 
     /**************************************************************************/
@@ -74,6 +75,30 @@ export function SidebarButtons() {
                             <span className="sr-only">Settings</span>
                         </div>
                     </Link>
+                </Button>
+
+                <Button
+                    variant="plain"
+                    size="icon"
+                    className={cn(
+                        "hover:bg-background relative",
+                        open ? "absolute left-0 z-0 opacity-0" : ""
+                    )}
+                    tooltip="Log out"
+                    onClick={async () => {
+                        await logout();
+                        await navigate({ to: "/login" });
+                    }}
+                >
+                    <div
+                        className={cn(
+                            "absolute transition-all delay-150 duration-150 ease-[cubic-bezier(.4,0,.2,1)]",
+                            open ? "-left-24" : "left-2"
+                        )}
+                    >
+                        <LogOutIcon />
+                        <span className="sr-only">Log Out</span>
+                    </div>
                 </Button>
             </div>
         </div>

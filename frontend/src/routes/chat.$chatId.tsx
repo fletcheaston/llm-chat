@@ -1,42 +1,53 @@
-import * as React from "react";
-
 import { createFileRoute } from "@tanstack/react-router";
+import { observer } from "mobx-react-lite";
 
+import { useUser } from "@/components/auth";
 import { CreateMessage } from "@/components/create-message";
 import { MembersDialog } from "@/components/members";
-import { MessageTree } from "@/components/message-content";
+import { MessageTree } from "@/components/message-tree";
 import { ShareButton } from "@/components/share";
-import { ConversationProvider, useMessageTree } from "@/sync/conversation";
+import { useStore } from "@/sync/stores";
 
 export const Route = createFileRoute("/chat/$chatId")({
     component: RouteComponent,
 });
 
-function Conversation() {
+const Conversation = observer(function Conversation(props: { conversationId: string }) {
     /**************************************************************************/
     /* State */
-    const messageTree = useMessageTree();
+    const store = useStore();
+
+    const user = useUser();
+    const conversation = store.getMyConversation(props.conversationId, user.id);
+    const messageTree = store.getMessageTree(props.conversationId);
+
+    if (!conversation) {
+        return null;
+    }
 
     /**************************************************************************/
     /* Render */
     return (
         <div className="flex max-w-3xl grow flex-col">
             <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-                <MembersDialog />
+                <MembersDialog conversationId={props.conversationId} />
 
-                <ShareButton />
+                <ShareButton conversationId={props.conversationId} />
             </div>
 
             <div className="grow px-4 pb-12 text-sm">
-                <MessageTree messageTree={messageTree} />
+                <MessageTree
+                    messageTree={messageTree}
+                    conversation={conversation}
+                />
             </div>
 
             <div className="sticky bottom-0 rounded-xl">
-                <CreateMessage />
+                <CreateMessage conversationId={props.conversationId} />
             </div>
         </div>
     );
-}
+});
 
 function RouteComponent() {
     /**************************************************************************/
@@ -45,9 +56,5 @@ function RouteComponent() {
 
     /**************************************************************************/
     /* Render */
-    return (
-        <ConversationProvider conversationId={chatId}>
-            <Conversation />
-        </ConversationProvider>
-    );
+    return <Conversation conversationId={chatId} />;
 }

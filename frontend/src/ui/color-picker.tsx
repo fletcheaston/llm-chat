@@ -1,7 +1,5 @@
-"use client";
-
+import { ComponentProps } from "react";
 import { forwardRef, useMemo, useState } from "react";
-import * as React from "react";
 
 import { HexColorPicker } from "react-colorful";
 
@@ -18,7 +16,7 @@ interface ColorPickerProps {
 
 const ColorPicker = forwardRef<
     HTMLInputElement,
-    Omit<React.ComponentProps<"button">, "value" | "onChange" | "onBlur"> & ColorPickerProps
+    Omit<ComponentProps<"button">, "value" | "onChange" | "onBlur"> & ColorPickerProps
 >(({ disabled, value, onChange, onBlur, name, className, ...props }) => {
     const [open, setOpen] = useState(false);
 

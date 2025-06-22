@@ -1,48 +1,24 @@
-import { useMemo } from "react";
-
 import { UsersIcon } from "lucide-react";
+import { observer } from "mobx-react-lite";
 
-import { useConversation, useUserMap } from "@/sync/conversation";
-import { db } from "@/sync/database";
-import { useCachedLiveQuery } from "@/sync/utils";
+import { useStore } from "@/sync/stores";
 import { Button } from "@/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/ui/dialog";
 
 import { llmToName } from "./models";
 
-export function MembersDialog() {
+export const MembersDialog = observer(function MembersDialog({
+    conversationId,
+}: {
+    conversationId: string;
+}) {
     /**************************************************************************/
     /* State */
-    const conversation = useConversation();
-
-    const userMap = useUserMap();
-
-    const messages = useCachedLiveQuery(async () => {
-        return db.messages.where("conversationId").equals(conversation.id).sortBy("created");
-    }, [conversation.id]);
+    const store = useStore();
 
     // Calculate message counts
-    const userMessageCounts = useMemo(() => {
-        if (!messages) return {};
-
-        return Object.fromEntries(
-            Object.keys(userMap).map((userId) => [
-                userId,
-                messages.filter((msg) => msg.authorId === userId).length,
-            ])
-        );
-    }, [messages, userMap]);
-
-    const llmMessageCounts = useMemo(() => {
-        if (!messages) return {};
-
-        return Object.fromEntries(
-            Object.keys(llmToName).map((llm) => [
-                llm,
-                messages.filter((msg) => msg.llm === llm).length,
-            ])
-        );
-    }, [messages]);
+    const userMessageCounts = store.getUserMessageCounts(conversationId);
+    const llmMessageCounts = store.getLLMMessageCounts(conversationId);
 
     /**************************************************************************/
     /* Render */
@@ -69,8 +45,12 @@ export function MembersDialog() {
                         <h3 className="text-lg">Users</h3>
 
                         <div className="flex flex-col gap-1">
-                            {Object.values(userMap).map((user) => {
-                                const count = userMessageCounts[user.id];
+                            {Object.entries(userMessageCounts).map(([userId, count]) => {
+                                const user = store.userStore.getUser(userId);
+
+                                if (!user) {
+                                    return null;
+                                }
 
                                 return (
                                     <div
@@ -120,4 +100,4 @@ export function MembersDialog() {
             </DialogContent>
         </Dialog>
     );
-}
+});

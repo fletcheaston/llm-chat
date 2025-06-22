@@ -7,7 +7,7 @@ import { SidebarShared } from "@/components/sidebar-shared";
 import { useTheme } from "@/components/themes";
 import sonnerCss from "@/sonner.css?url";
 import appCss from "@/styles.css?url";
-import { ConversationsProvider } from "@/sync/conversations";
+import { StoreProvider } from "@/sync/stores";
 import { SyncProvider } from "@/sync/sync-provider";
 import { SidebarProvider } from "@/ui/sidebar";
 
@@ -71,17 +71,15 @@ function Authenticated() {
     /* Render */
     return (
         <SyncProvider>
-            <ConversationsProvider>
+            <SidebarProvider>
                 <SidebarProvider>
-                    <SidebarProvider>
-                        <div className="relative">
-                            <SidebarShared />
-                        </div>
+                    <div className="relative">
+                        <SidebarShared />
+                    </div>
 
-                        <Outlet />
-                    </SidebarProvider>
+                    <Outlet />
                 </SidebarProvider>
-            </ConversationsProvider>
+            </SidebarProvider>
         </SyncProvider>
     );
 }
@@ -107,7 +105,9 @@ function RouteComponent() {
 
             <body className="h-full overflow-y-auto overscroll-none">
                 <main>
-                    {user === null ? <Anonymous /> : <Authenticated />}
+                    <StoreProvider>
+                        {user === null ? <Anonymous /> : <Authenticated />}
+                    </StoreProvider>
 
                     <Toaster
                         expand

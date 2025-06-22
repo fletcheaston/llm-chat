@@ -1,0 +1,153 @@
+import { makeAutoObservable, runInAction, toJS } from "mobx";
+
+import { LargeLanguageModel, MemberSchema } from "@/api";
+import { db } from "@/sync/database";
+
+export class MemberStore {
+    members = new Map<string, MemberSchema>();
+    isLoading = false;
+    error: string | null = null;
+
+    constructor() {
+        makeAutoObservable(this);
+    }
+
+    // Actions
+    private setMembers(members: MemberSchema[]) {
+        runInAction(() => {
+            this.members.clear();
+            members.forEach((member) => {
+                this.members.set(member.id, member);
+            });
+        });
+    }
+
+    private setLoading(loading: boolean) {
+        runInAction(() => {
+            this.isLoading = loading;
+        });
+    }
+
+    private setError(error: string | null) {
+        runInAction(() => {
+            this.error = error;
+        });
+    }
+
+    // Update LLM selection for a member
+    updateLLMSelection(memberId: string, llms: LargeLanguageModel[]) {
+        runInAction(() => {
+            const member = this.members.get(memberId);
+            if (member) {
+                this.members.set(memberId, { ...member, llmsSelected: llms });
+            }
+        });
+    }
+
+    // Update message branches for a member
+    updateMessageBranches(memberId: string, branches: Record<string, boolean>) {
+        runInAction(() => {
+            const member = this.members.get(memberId);
+            if (member) {
+                this.members.set(memberId, { ...member, messageBranches: branches });
+            }
+        });
+    }
+
+    // Toggle message branch visibility
+    toggleMessageBranch(memberId: string, messageId: string) {
+        runInAction(() => {
+            const member = this.members.get(memberId);
+            if (member) {
+                const newBranches = { ...member.messageBranches };
+                newBranches[messageId] = !newBranches[messageId];
+                this.members.set(memberId, { ...member, messageBranches: newBranches });
+            }
+        });
+    }
+
+    // Toggle member visibility
+    toggleMemberVisibility(memberId: string) {
+        runInAction(() => {
+            const member = this.members.get(memberId);
+            if (member) {
+                this.members.set(memberId, { ...member, hidden: !member.hidden });
+            }
+        });
+    }
+
+    // Computed getters
+    get allMembers(): MemberSchema[] {
+        return Array.from(this.members.values());
+    }
+
+    get membersByConversation() {
+        const grouped = new Map<string, MemberSchema[]>();
+        this.members.forEach((member) => {
+            const conversationId = member.conversationId;
+            if (!grouped.has(conversationId)) {
+                grouped.set(conversationId, []);
+            }
+            grouped.get(conversationId)!.push(member);
+        });
+        return grouped;
+    }
+
+    getMembersByConversationId(conversationId: string): MemberSchema[] {
+        return this.membersByConversation.get(conversationId) || [];
+    }
+
+    getMembersByUserId(userId: string): MemberSchema[] {
+        return this.allMembers.filter((member) => member.userId === userId);
+    }
+
+    // Find member by user and conversation
+    getMemberByUserAndConversation(
+        userId: string,
+        conversationId: string
+    ): MemberSchema | undefined {
+        return this.allMembers.find(
+            (member) => member.userId === userId && member.conversationId === conversationId
+        );
+    }
+
+    // Database persistence methods
+    async loadFromDatabase(): Promise<void> {
+        try {
+            this.setLoading(true);
+            const members = await db.members.toArray();
+            this.setMembers(members as MemberSchema[]);
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to load members");
+        } finally {
+            this.setLoading(false);
+        }
+    }
+
+    async save(member: MemberSchema): Promise<void> {
+        try {
+            // Partial observables are not recursively converted
+            await db.members.put({
+                ...toJS(member),
+                llmsSelected: toJS(member.llmsSelected),
+                messageBranches: toJS(member.messageBranches),
+            });
+
+            runInAction(() => {
+                const existing = this.members.get(member.id);
+
+                this.members.set(member.id, { ...existing, ...member });
+            });
+        } catch (error) {
+            this.setError(error instanceof Error ? error.message : "Failed to save member");
+        }
+    }
+
+    async clearAll(): Promise<void> {
+        await db.members.clear();
+
+        runInAction(() => {
+            this.members.clear();
+        });
+    }
+}

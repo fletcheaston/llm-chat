@@ -4,6 +4,7 @@ import type { Client, Options as ClientOptions, TDataShape } from "@hey-api/clie
 import { client as _heyApiClient } from "./client.gen";
 import type {
     CreateConversationData,
+    CreateConversationErrors,
     CreateConversationResponses,
     CreateMessageData,
     CreateMessageErrors,
@@ -171,7 +172,7 @@ export const createConversation = <ThrowOnError extends boolean = false>(
 ) => {
     return (options.client ?? _heyApiClient).post<
         CreateConversationResponses,
-        unknown,
+        CreateConversationErrors,
         ThrowOnError
     >({
         security: [

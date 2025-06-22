@@ -1,5 +1,3 @@
-import * as React from "react";
-
 import { useLocation } from "@tanstack/react-router";
 
 import { ConversationSidebar } from "@/components/conversation-sidebar";

@@ -135,7 +135,8 @@ export type UserSchema = {
 export type ErrorMessage =
     | "User is unauthenticated."
     | "Invalid auth token."
-    | "Resource does not exist.";
+    | "Resource does not exist."
+    | "Rate limit exceeded.";
 
 /**
  * ErrorMessage
@@ -144,6 +145,7 @@ export const ErrorMessage = {
     USER_IS_UNAUTHENTICATED: "User is unauthenticated.",
     INVALID_AUTH_TOKEN: "Invalid auth token.",
     RESOURCE_DOES_NOT_EXIST: "Resource does not exist.",
+    RATE_LIMIT_EXCEEDED: "Rate limit exceeded.",
 } as const;
 
 /**
@@ -460,28 +462,6 @@ export type MemberSchema = {
 };
 
 /**
- * MessageMetadataSchema
- */
-export type MessageMetadataSchema = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Conversationid
-     */
-    conversationId: string;
-    /**
-     * Replytoid
-     */
-    replyToId: string | null;
-    /**
-     * Created
-     */
-    created: string;
-};
-
-/**
  * SyncConversation
  */
 export type SyncConversation = {
@@ -512,17 +492,6 @@ export type SyncMessage = {
      */
     type: "message";
     data: MessageSchema;
-};
-
-/**
- * SyncMessageMetadata
- */
-export type SyncMessageMetadata = {
-    /**
-     * Type
-     */
-    type: "message-metadata";
-    data: MessageMetadataSchema;
 };
 
 /**
@@ -636,6 +605,10 @@ export type CreateMessageErrors = {
      * Not Found
      */
     404: ErrorSchema;
+    /**
+     * Too Many Requests
+     */
+    429: ErrorSchema;
 };
 
 export type CreateMessageError = CreateMessageErrors[keyof CreateMessageErrors];
@@ -673,6 +646,15 @@ export type CreateConversationData = {
     query?: never;
     url: "/api/conversations/create";
 };
+
+export type CreateConversationErrors = {
+    /**
+     * Too Many Requests
+     */
+    429: ErrorSchema;
+};
+
+export type CreateConversationError = CreateConversationErrors[keyof CreateConversationErrors];
 
 export type CreateConversationResponses = {
     /**
@@ -798,7 +780,7 @@ export type GlobalSyncTypesResponses = {
      * Response
      * OK
      */
-    200: SyncMessageMetadata | SyncMessage | SyncConversation | SyncMember | SyncUser;
+    200: SyncMessage | SyncConversation | SyncMember | SyncUser;
 };
 
 export type GlobalSyncTypesResponse = GlobalSyncTypesResponses[keyof GlobalSyncTypesResponses];
@@ -820,7 +802,7 @@ export type GlobalSyncBootstrapResponses = {
      * Response
      * OK
      */
-    200: Array<SyncMessageMetadata | SyncMessage | SyncConversation | SyncMember | SyncUser>;
+    200: Array<SyncMessage | SyncConversation | SyncMember | SyncUser>;
 };
 
 export type GlobalSyncBootstrapResponse =
