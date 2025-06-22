@@ -4,7 +4,7 @@ import { observer } from "mobx-react-lite";
 import { useUser } from "@/components/auth";
 import { CreateMessage } from "@/components/create-message";
 import { MembersDialog } from "@/components/members";
-import { MessageTree } from "@/components/message-content";
+import { MessageTree } from "@/components/message-tree";
 import { ShareButton } from "@/components/share";
 import { useStore } from "@/sync/stores";
 
