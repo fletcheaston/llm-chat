@@ -84,18 +84,22 @@ function ActionButton(props: {
 
 function ViewMyMessage(props: {
     message: MessageSchema;
-    unsetBranch: (() => void) | null;
     onEditStart: () => void;
+    conversationId: string;
+    userId: string;
 }) {
     /**************************************************************************/
     /* State */
-    const ref = useRef<HTMLDivElement>(null);
+    const store = useStore();
 
-    // useEffect(() => {
-    //     if (!ref.current) return;
-    //
-    //     ref.current.scrollIntoView({ inline: "end", behavior: "smooth" });
-    // }, [props.message.content]);
+    // Check if this message has siblings (to determine if unset branch button should be shown)
+    const hasSiblings =
+        store.messageStore.allMessages.filter(
+            (msg) =>
+                msg.replyToId === props.message.replyToId &&
+                msg.conversationId === props.conversationId &&
+                msg.id !== props.message.id
+        ).length > 0;
 
     /**************************************************************************/
     /* Render */
@@ -112,23 +116,32 @@ function ViewMyMessage(props: {
                     <Markdown content={props.message.content} />
                 </div>
 
-                <div
-                    ref={ref}
-                    className="absolute right-0 -bottom-2 opacity-0 transition-all group-hover:opacity-100"
-                >
+                <div className="absolute right-0 -bottom-2 opacity-0 transition-all group-hover:opacity-100">
                     <div className="flex items-center gap-1 text-xs">
                         <p>{formatDatetime(props.message.modified)}</p>
 
-                        <ActionButton
-                            onClick={props.unsetBranch}
-                            tooltip="View branches"
-                        >
-                            <SplitIcon
-                                height={10}
-                                width={10}
-                                className="rotate-180"
-                            />
-                        </ActionButton>
+                        {hasSiblings && (
+                            <ActionButton
+                                onClick={async () => {
+                                    try {
+                                        await store.unsetMessageBranch(
+                                            props.message.id,
+                                            props.conversationId,
+                                            props.userId
+                                        );
+                                    } catch (e) {
+                                        toast.error(`Unable to change branches: ${e}`);
+                                    }
+                                }}
+                                tooltip="View branches"
+                            >
+                                <SplitIcon
+                                    height={10}
+                                    width={10}
+                                    className="rotate-180"
+                                />
+                            </ActionButton>
+                        )}
 
                         <ActionButton
                             onClick={props.onEditStart}
@@ -231,11 +244,7 @@ function BranchMyMessage(props: {
     );
 }
 
-function MyMessage(props: {
-    message: MessageSchema;
-    unsetBranch: (() => void) | null;
-    conversationId: string;
-}) {
+function MyMessage(props: { message: MessageSchema; conversationId: string; userId: string }) {
     /**************************************************************************/
     /* State */
     const [editing, setEditing] = useState(false);
@@ -246,8 +255,9 @@ function MyMessage(props: {
         return (
             <ViewMyMessage
                 message={props.message}
-                unsetBranch={props.unsetBranch}
                 onEditStart={() => setEditing(true)}
+                conversationId={props.conversationId}
+                userId={props.userId}
             />
         );
     }
@@ -263,21 +273,24 @@ function MyMessage(props: {
 
 function OtherMessage(props: {
     message: MessageSchema;
-    unsetBranch: (() => void) | null;
     authorName: string;
     authorImageUrl: string;
+    conversationId: string;
+    userId: string;
 }) {
     /**************************************************************************/
     /* State */
     const settings = useSettings();
+    const store = useStore();
 
-    const ref = useRef<HTMLDivElement>(null);
-
-    // useEffect(() => {
-    //     if (!ref.current) return;
-    //
-    //     ref.current.scrollIntoView({ inline: "end", behavior: "smooth" });
-    // }, [props.message.content]);
+    // Check if this message has siblings (to determine if unset branch button should be shown)
+    const hasSiblings =
+        store.messageStore.allMessages.filter(
+            (msg) =>
+                msg.replyToId === props.message.replyToId &&
+                msg.conversationId === props.conversationId &&
+                msg.id !== props.message.id
+        ).length > 0;
 
     const delta = useMemo(() => {
         if (!props.message.llmCompleted) {
@@ -301,23 +314,32 @@ function OtherMessage(props: {
                 <Markdown content={props.message.content} />
             </div>
 
-            <div
-                ref={ref}
-                className="absolute -bottom-2 left-0 opacity-0 transition-all group-hover:opacity-100"
-            >
+            <div className="absolute -bottom-2 left-0 opacity-0 transition-all group-hover:opacity-100">
                 <div className="flex items-center gap-1 text-xs font-medium">
                     <CopyButton value={props.message.content} />
 
-                    <ActionButton
-                        onClick={props.unsetBranch}
-                        tooltip="View branches"
-                    >
-                        <SplitIcon
-                            height={10}
-                            width={10}
-                            className="rotate-180"
-                        />
-                    </ActionButton>
+                    {hasSiblings && (
+                        <ActionButton
+                            onClick={async () => {
+                                try {
+                                    await store.unsetMessageBranch(
+                                        props.message.id,
+                                        props.conversationId,
+                                        props.userId
+                                    );
+                                } catch (e) {
+                                    toast.error(`Unable to change branches: ${e}`);
+                                }
+                            }}
+                            tooltip="View branches"
+                        >
+                            <SplitIcon
+                                height={10}
+                                width={10}
+                                className="rotate-180"
+                            />
+                        </ActionButton>
+                    )}
 
                     <p>{formatDatetime(props.message.modified)}</p>
 
@@ -368,11 +390,7 @@ function OtherMessage(props: {
     );
 }
 
-export function MessageContent(props: {
-    unsetBranch: (() => void) | null;
-    conversationId: string;
-    messageId: string;
-}) {
+export function MessageContent(props: { conversationId: string; messageId: string }) {
     /**************************************************************************/
     /* State */
     const self = useUser();
@@ -391,8 +409,8 @@ export function MessageContent(props: {
             <MyMessage
                 key={message.id}
                 message={message}
-                unsetBranch={props.unsetBranch}
                 conversationId={props.conversationId}
+                userId={self.id}
             />
         );
     }
@@ -404,9 +422,10 @@ export function MessageContent(props: {
             <OtherMessage
                 key={message.id}
                 message={message}
-                unsetBranch={props.unsetBranch}
                 authorName={user.name}
                 authorImageUrl={user.imageUrl}
+                conversationId={props.conversationId}
+                userId={self.id}
             />
         );
     }
@@ -418,9 +437,10 @@ export function MessageContent(props: {
         <OtherMessage
             key={message.id}
             message={message}
-            unsetBranch={props.unsetBranch}
             authorName={llmToName[llm]}
             authorImageUrl={llmToImageUrl[llm]}
+            conversationId={props.conversationId}
+            userId={self.id}
         />
     );
 }
@@ -456,7 +476,6 @@ export function MessageTree(props: {
         return (
             <div className="flex flex-col gap-10">
                 <MessageContent
-                    unsetBranch={null}
                     conversationId={props.conversationId}
                     messageId={message.id}
                 />
@@ -475,18 +494,6 @@ export function MessageTree(props: {
         return (
             <div className="flex flex-col gap-10">
                 <MessageContent
-                    unsetBranch={async () => {
-                        try {
-                            await store.updateMessageBranches({
-                                userId: user.id,
-                                conversationId: props.conversationId,
-                                hiddenMessageIds: [selectedBranch.message.id],
-                                shownMessageId: null,
-                            });
-                        } catch (e) {
-                            toast.error(`Unable to change branches: ${e}`);
-                        }
-                    }}
                     conversationId={props.conversationId}
                     messageId={selectedBranch.message.id}
                 />
@@ -534,7 +541,6 @@ export function MessageTree(props: {
                             }}
                         >
                             <MessageContent
-                                unsetBranch={null}
                                 conversationId={props.conversationId}
                                 messageId={tree.message.id}
                             />

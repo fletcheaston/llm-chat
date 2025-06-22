@@ -487,6 +487,23 @@ export class RootStore {
             );
         }).length;
     }
+
+    async unsetMessageBranch(messageId: string, conversationId: string, userId: string) {
+        // Get the message to find its siblings
+        const message = this.messageStore.getMessage(messageId);
+
+        if (!message) {
+            throw new Error("Message not found");
+        }
+
+        // Hide the current message and show no specific message (null means show all siblings)
+        await this.updateMessageBranches({
+            userId,
+            conversationId,
+            hiddenMessageIds: [messageId],
+            shownMessageId: null,
+        });
+    }
 }
 
 // Create a singleton instance
