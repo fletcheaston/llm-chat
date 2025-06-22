@@ -13,7 +13,7 @@ import {
 import { toast } from "sonner";
 
 import { MessageSchema } from "@/api";
-import { MessageTreeSchema, useStore } from "@/sync/stores";
+import { MessageTreeSchema, MyConversationSchema, useStore } from "@/sync/stores";
 import { Button } from "@/ui/button";
 import {
     Carousel,
@@ -85,21 +85,12 @@ function ActionButton(props: {
 function ViewMyMessage(props: {
     message: MessageSchema;
     onEditStart: () => void;
-    conversationId: string;
     userId: string;
+    hasSiblings: boolean;
 }) {
     /**************************************************************************/
     /* State */
     const store = useStore();
-
-    // Check if this message has siblings (to determine if unset branch button should be shown)
-    const hasSiblings =
-        store.messageStore.allMessages.filter(
-            (msg) =>
-                msg.replyToId === props.message.replyToId &&
-                msg.conversationId === props.conversationId &&
-                msg.id !== props.message.id
-        ).length > 0;
 
     /**************************************************************************/
     /* Render */
@@ -120,13 +111,12 @@ function ViewMyMessage(props: {
                     <div className="flex items-center gap-1 text-xs">
                         <p>{formatDatetime(props.message.modified)}</p>
 
-                        {hasSiblings && (
+                        {props.hasSiblings && (
                             <ActionButton
                                 onClick={async () => {
                                     try {
                                         await store.unsetMessageBranch(
                                             props.message.id,
-                                            props.conversationId,
                                             props.userId
                                         );
                                     } catch (e) {
@@ -162,22 +152,17 @@ function ViewMyMessage(props: {
 }
 
 function BranchMyMessage(props: {
+    conversation: MyConversationSchema;
     message: MessageSchema;
     onEditStop: () => void;
-    conversationId: string;
 }) {
     /**************************************************************************/
     /* State */
     const user = useUser();
     const store = useStore();
-    const conversation = store.getMyConversation(props.conversationId, user.id);
 
     // Initial content comes from original message
     const contentRef = useRef(props.message.content);
-
-    if (!conversation) {
-        return null;
-    }
 
     /**************************************************************************/
     /* Render */
@@ -210,9 +195,9 @@ function BranchMyMessage(props: {
                                         userId: user.id,
                                         replyToId: props.message.replyToId,
                                         siblingMessageId: props.message.id,
-                                        conversationId: props.conversationId,
+                                        conversationId: props.conversation.id,
                                         content: contentRef.current,
-                                        llms: conversation.llms,
+                                        llms: props.conversation.llms,
                                     });
                                 } catch (e) {
                                     toast.error(`Unable to create message: ${e}`);
@@ -244,7 +229,12 @@ function BranchMyMessage(props: {
     );
 }
 
-function MyMessage(props: { message: MessageSchema; conversationId: string; userId: string }) {
+function MyMessage(props: {
+    conversation: MyConversationSchema;
+    message: MessageSchema;
+    userId: string;
+    hasSiblings: boolean;
+}) {
     /**************************************************************************/
     /* State */
     const [editing, setEditing] = useState(false);
@@ -256,17 +246,17 @@ function MyMessage(props: { message: MessageSchema; conversationId: string; user
             <ViewMyMessage
                 message={props.message}
                 onEditStart={() => setEditing(true)}
-                conversationId={props.conversationId}
                 userId={props.userId}
+                hasSiblings={props.hasSiblings}
             />
         );
     }
 
     return (
         <BranchMyMessage
+            conversation={props.conversation}
             message={props.message}
             onEditStop={() => setEditing(false)}
-            conversationId={props.conversationId}
         />
     );
 }
@@ -275,22 +265,13 @@ function OtherMessage(props: {
     message: MessageSchema;
     authorName: string;
     authorImageUrl: string;
-    conversationId: string;
     userId: string;
+    hasSiblings: boolean;
 }) {
     /**************************************************************************/
     /* State */
     const settings = useSettings();
     const store = useStore();
-
-    // Check if this message has siblings (to determine if unset branch button should be shown)
-    const hasSiblings =
-        store.messageStore.allMessages.filter(
-            (msg) =>
-                msg.replyToId === props.message.replyToId &&
-                msg.conversationId === props.conversationId &&
-                msg.id !== props.message.id
-        ).length > 0;
 
     const delta = useMemo(() => {
         if (!props.message.llmCompleted) {
@@ -318,15 +299,11 @@ function OtherMessage(props: {
                 <div className="flex items-center gap-1 text-xs font-medium">
                     <CopyButton value={props.message.content} />
 
-                    {hasSiblings && (
+                    {props.hasSiblings && (
                         <ActionButton
                             onClick={async () => {
                                 try {
-                                    await store.unsetMessageBranch(
-                                        props.message.id,
-                                        props.conversationId,
-                                        props.userId
-                                    );
+                                    await store.unsetMessageBranch(props.message.id, props.userId);
                                 } catch (e) {
                                     toast.error(`Unable to change branches: ${e}`);
                                 }
@@ -390,17 +367,16 @@ function OtherMessage(props: {
     );
 }
 
-export function MessageContent(props: { conversationId: string; messageId: string }) {
+export function MessageContent(props: {
+    conversation: MyConversationSchema;
+    messageTree: MessageTreeSchema;
+    hasSiblings: boolean;
+}) {
     /**************************************************************************/
     /* State */
     const self = useUser();
     const store = useStore();
-    const userMap = store.getUserMapForConversation(props.conversationId);
-    const message = store.messageStore.getMessage(props.messageId);
-
-    if (!message) {
-        return <div className="min-h-[70px]" />;
-    }
+    const message = props.messageTree.message;
 
     /**************************************************************************/
     /* Render */
@@ -408,14 +384,15 @@ export function MessageContent(props: { conversationId: string; messageId: strin
         return (
             <MyMessage
                 key={message.id}
+                conversation={props.conversation}
                 message={message}
-                conversationId={props.conversationId}
                 userId={self.id}
+                hasSiblings={props.hasSiblings ?? false}
             />
         );
     }
 
-    const user = userMap[message.authorId ?? ""];
+    const user = message.authorId ? store.userStore.getUser(message.authorId) : null;
 
     if (user) {
         return (
@@ -424,8 +401,8 @@ export function MessageContent(props: { conversationId: string; messageId: strin
                 message={message}
                 authorName={user.name}
                 authorImageUrl={user.imageUrl}
-                conversationId={props.conversationId}
                 userId={self.id}
+                hasSiblings={props.hasSiblings ?? false}
             />
         );
     }
@@ -439,51 +416,47 @@ export function MessageContent(props: { conversationId: string; messageId: strin
             message={message}
             authorName={llmToName[llm]}
             authorImageUrl={llmToImageUrl[llm]}
-            conversationId={props.conversationId}
             userId={self.id}
+            hasSiblings={props.hasSiblings ?? false}
         />
     );
 }
 
 export function MessageTree(props: {
+    conversation: MyConversationSchema;
     messageTree: Array<MessageTreeSchema>;
-    conversationId: string;
 }) {
     /**************************************************************************/
     /* State */
     const user = useUser();
     const settings = useSettings();
     const store = useStore();
-    const conversation = store.getMyConversation(props.conversationId, user.id);
 
     const selectedBranch = useMemo(() => {
-        if (!conversation) return;
+        if (!props.conversation) return;
 
         return props.messageTree.find((tree) => {
-            return conversation.messageBranches[tree.message.id];
+            return props.conversation.messageBranches[tree.message.id];
         });
-    }, [props.messageTree, conversation?.messageBranches]);
-
-    if (!conversation) {
-        return null;
-    }
+    }, [props.messageTree, props.conversation?.messageBranches]);
 
     /**************************************************************************/
     /* Render */
     if (props.messageTree.length === 1) {
-        const { message, replies } = props.messageTree[0]!;
+        const messageTreeItem = props.messageTree[0]!;
 
         return (
             <div className="flex flex-col gap-10">
                 <MessageContent
-                    conversationId={props.conversationId}
-                    messageId={message.id}
+                    conversation={props.conversation}
+                    messageTree={messageTreeItem}
+                    hasSiblings={false}
                 />
 
-                {replies.length > 0 ? (
+                {messageTreeItem.replies.length > 0 ? (
                     <MessageTree
-                        messageTree={replies}
-                        conversationId={props.conversationId}
+                        conversation={props.conversation}
+                        messageTree={messageTreeItem.replies}
                     />
                 ) : null}
             </div>
@@ -494,14 +467,15 @@ export function MessageTree(props: {
         return (
             <div className="flex flex-col gap-10">
                 <MessageContent
-                    conversationId={props.conversationId}
-                    messageId={selectedBranch.message.id}
+                    conversation={props.conversation}
+                    messageTree={selectedBranch}
+                    hasSiblings={props.messageTree.length > 1}
                 />
 
                 {selectedBranch.replies.length > 0 ? (
                     <MessageTree
+                        conversation={props.conversation}
                         messageTree={selectedBranch.replies}
-                        conversationId={props.conversationId}
                     />
                 ) : null}
             </div>
@@ -529,7 +503,7 @@ export function MessageTree(props: {
                                 try {
                                     await store.updateMessageBranches({
                                         userId: user.id,
-                                        conversationId: props.conversationId,
+                                        conversationId: props.conversation.id,
                                         hiddenMessageIds: props.messageTree
                                             .map(({ message }) => message.id)
                                             .filter((id) => id !== tree.message.id),
@@ -541,8 +515,9 @@ export function MessageTree(props: {
                             }}
                         >
                             <MessageContent
-                                conversationId={props.conversationId}
-                                messageId={tree.message.id}
+                                conversation={props.conversation}
+                                messageTree={tree}
+                                hasSiblings={true}
                             />
                         </CarouselItem>
                     ))}

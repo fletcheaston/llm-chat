@@ -15,7 +15,6 @@ export const MembersDialog = observer(function MembersDialog({
     /**************************************************************************/
     /* State */
     const store = useStore();
-    const userMap = store.getUserMapForConversation(conversationId);
 
     // Calculate message counts
     const userMessageCounts = store.getUserMessageCounts(conversationId);
@@ -46,8 +45,12 @@ export const MembersDialog = observer(function MembersDialog({
                         <h3 className="text-lg">Users</h3>
 
                         <div className="flex flex-col gap-1">
-                            {Object.values(userMap).map((user) => {
-                                const count = userMessageCounts[user.id];
+                            {Object.entries(userMessageCounts).map(([userId, count]) => {
+                                const user = store.userStore.getUser(userId);
+
+                                if (!user) {
+                                    return null;
+                                }
 
                                 return (
                                     <div

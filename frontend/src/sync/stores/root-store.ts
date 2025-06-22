@@ -6,7 +6,6 @@ import {
     LargeLanguageModel,
     MemberSchema,
     MessageSchema,
-    UserSchema,
     createConversation as apiCreateConversation,
     createMessage as apiCreateMessage,
     updateConversation as apiUpdateConversation,
@@ -22,7 +21,7 @@ export interface MessageTreeSchema {
     replies: MessageTreeSchema[];
 }
 
-export interface CustomizedConversationSchema extends ConversationSchema {
+export interface MyConversationSchema extends ConversationSchema {
     llms: Array<LargeLanguageModel>;
     messageBranches: MemberSchema["messageBranches"];
 }
@@ -93,10 +92,7 @@ export class RootStore {
     /**************************************************************************/
 
     /* Conversation-specific computed values */
-    getMyConversation(
-        conversationId: string,
-        userId: string
-    ): CustomizedConversationSchema | undefined {
+    getMyConversation(conversationId: string, userId: string): MyConversationSchema | undefined {
         const conversation = this.conversationStore.getConversation(conversationId);
         const member = this.memberStore.getMemberByUserAndConversation(userId, conversationId);
 
@@ -130,21 +126,6 @@ export class RootStore {
         return messages
             .filter((msg) => msg.replyToId === null)
             .map((rootMessage) => buildTree(rootMessage));
-    }
-
-    getUserMapForConversation(conversationId: string): Record<string, UserSchema> {
-        const members = this.memberStore.getMembersByConversationId(conversationId);
-        const userIds = members.map((member) => member.userId);
-
-        const userMap: Record<string, UserSchema> = {};
-        userIds.forEach((userId) => {
-            const user = this.userStore.getUser(userId);
-            if (user) {
-                userMap[userId] = user;
-            }
-        });
-
-        return userMap;
     }
 
     /**************************************************************************/
@@ -426,14 +407,16 @@ export class RootStore {
 
     getUserMessageCounts(conversationId: string): Record<string, number> {
         const messages = this.getMessagesByConversationId(conversationId);
-        const userMap = this.getUserMapForConversation(conversationId);
 
-        return Object.fromEntries(
-            Object.keys(userMap).map((userId) => [
-                userId,
-                messages.filter((msg) => msg.authorId === userId).length,
-            ])
-        );
+        const userIdCounts: Record<string, number> = {};
+
+        messages.forEach((msg) => {
+            if (msg.authorId) {
+                userIdCounts[msg.authorId] = (userIdCounts[msg.authorId] || 0) + 1;
+            }
+        });
+
+        return userIdCounts;
     }
 
     getLLMMessageCounts(conversationId: string): Record<string, number> {
@@ -488,7 +471,7 @@ export class RootStore {
         }).length;
     }
 
-    async unsetMessageBranch(messageId: string, conversationId: string, userId: string) {
+    async unsetMessageBranch(messageId: string, userId: string) {
         // Get the message to find its siblings
         const message = this.messageStore.getMessage(messageId);
 
@@ -499,7 +482,7 @@ export class RootStore {
         // Hide the current message and show no specific message (null means show all siblings)
         await this.updateMessageBranches({
             userId,
-            conversationId,
+            conversationId: message.conversationId,
             hiddenMessageIds: [messageId],
             shownMessageId: null,
         });

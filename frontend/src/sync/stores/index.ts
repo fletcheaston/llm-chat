@@ -6,7 +6,7 @@ export { UserStore } from "./user-store";
 export { RootStore, rootStore } from "./root-store";
 export type {
     MessageTreeSchema,
-    CustomizedConversationSchema,
+    MyConversationSchema,
     ConversationWithMemberData,
 } from "./root-store";
 
