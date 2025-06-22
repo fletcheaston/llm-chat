@@ -1,7 +1,7 @@
 import pytest
 
 pytest_plugins = [
-    "chats.test_fixtures.users",
+    "backend.test_fixtures.users",
 ]
 
 

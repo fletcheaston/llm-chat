@@ -108,7 +108,7 @@ class Migration(migrations.Migration):
                     "conversation",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.PROTECT,
-                        to="chats.conversation",
+                        to="backend.conversation",
                     ),
                 ),
                 (
@@ -212,7 +212,7 @@ class Migration(migrations.Migration):
                         null=True,
                         on_delete=django.db.models.deletion.DO_NOTHING,
                         related_name="+",
-                        to="chats.conversation",
+                        to="backend.conversation",
                     ),
                 ),
                 (
@@ -381,7 +381,7 @@ class Migration(migrations.Migration):
                     "conversation",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.PROTECT,
-                        to="chats.conversation",
+                        to="backend.conversation",
                     ),
                 ),
                 (
@@ -390,7 +390,7 @@ class Migration(migrations.Migration):
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.PROTECT,
-                        to="chats.message",
+                        to="backend.message",
                     ),
                 ),
             ],
@@ -438,7 +438,7 @@ class Migration(migrations.Migration):
                         null=True,
                         on_delete=django.db.models.deletion.DO_NOTHING,
                         related_name="+",
-                        to="chats.conversation",
+                        to="backend.conversation",
                     ),
                 ),
                 (
@@ -458,7 +458,7 @@ class Migration(migrations.Migration):
                         null=True,
                         on_delete=django.db.models.deletion.DO_NOTHING,
                         related_name="+",
-                        to="chats.message",
+                        to="backend.message",
                     ),
                 ),
             ],
@@ -526,7 +526,7 @@ class Migration(migrations.Migration):
                         null=True,
                         on_delete=django.db.models.deletion.DO_NOTHING,
                         related_name="+",
-                        to="chats.conversation",
+                        to="backend.conversation",
                     ),
                 ),
                 (
@@ -546,7 +546,7 @@ class Migration(migrations.Migration):
                         null=True,
                         on_delete=django.db.models.deletion.DO_NOTHING,
                         related_name="+",
-                        to="chats.tag",
+                        to="backend.tag",
                     ),
                 ),
             ],
@@ -577,13 +577,13 @@ class Migration(migrations.Migration):
                     "conversation",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.PROTECT,
-                        to="chats.conversation",
+                        to="backend.conversation",
                     ),
                 ),
                 (
                     "tag",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT, to="chats.tag"
+                        on_delete=django.db.models.deletion.PROTECT, to="backend.tag"
                     ),
                 ),
             ],
@@ -596,8 +596,8 @@ class Migration(migrations.Migration):
             name="db_tags",
             field=models.ManyToManyField(
                 related_name="conversations",
-                through="chats.ConversationToTag",
-                to="chats.tag",
+                through="backend.ConversationToTag",
+                to="backend.tag",
             ),
         ),
     ]
